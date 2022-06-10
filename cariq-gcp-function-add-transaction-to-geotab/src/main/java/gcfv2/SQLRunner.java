@@ -78,7 +78,7 @@ public class SQLRunner {
 	 *  update status in BatchLog 
 	 *  
 	 **/
-	public static int updateBatchLog(String status, UUID jobId) {
+	public static int updateBatchLog(String status, UUID jobId, Timestamp lastInsertedDT) {
 
 		int result = 0;
 		try (Connection con = DriverManager.getConnection(url, user, password);
@@ -87,7 +87,8 @@ public class SQLRunner {
 
 			preparedStatement.setString(1, status);
 			preparedStatement.setTimestamp(2, new Timestamp(System.currentTimeMillis()));
-			preparedStatement.setObject(3, jobId, java.sql.Types.OTHER);
+			preparedStatement.setTimestamp(3, lastInsertedDT);
+			preparedStatement.setObject(4, jobId, java.sql.Types.OTHER);
 
 			logger.info(preparedStatement.toString());
 			result = preparedStatement.executeUpdate();
@@ -155,11 +156,13 @@ public class SQLRunner {
 		
 		try (Connection con = DriverManager.getConnection(url, user, password);
                 Statement st = con.createStatement();
-                ResultSet rs = st.executeQuery(SQL_FETCH_FUEL_TX)) {
+                PreparedStatement preparedStatement = con.prepareStatement(SQL_FETCH_FUEL_TX)) {
+			
+				preparedStatement.setTimestamp(1, timeStamp);
+				ResultSet rs = preparedStatement.executeQuery();
+				
+				while (rs != null && rs.next()) {
 
-        	
-            while ( rs.next() ) {
-            	
 	            try {	
 	               String driverName = rs.getString("driverName");
 	               String siteName = rs.getString("siteName");
@@ -168,18 +171,14 @@ public class SQLRunner {
 	               
 	               //odometer
 	               Integer odstr = rs.getInt("odometer");
-	               System.out.println("odstr1 :" + odstr);
-	               DecimalFormat f = new DecimalFormat("##0.00");
-	             
+	               //logger.info("odstr1 :" + odstr);
 	               double odometer = milesTokm(new Double(odstr));
-	               System.out.println("odometer KM :" + odometer);
+	               //logger.info("odometer KM :" + odometer);
 	               
 	               //location
 	               Coordinate location = new Coordinate();
 	               location.setX(rs.getDouble("long"));
 	       		   location.setY(rs.getDouble("lat"));
-	             
-	              // System.out.println("loc :" + location.getX() + "---" + location.getY());
 	               
 	               String currency = rs.getString("currency");
 	               Timestamp time = rs.getTimestamp("inserted_at");
@@ -187,9 +186,9 @@ public class SQLRunner {
 	               
 	               //volume
 	               Double volume = rs.getDouble("volume");
-	               System.out.println("volume :" + volume); //gallon to liiter
+	               //logger.info("volume :" + volume); //gallon to liiter
 	               volume =  gallonToLiter(volume);
-	               System.out.println("volume in lt :" + volume);
+	               logger.info("volume in lt :" + volume);
 	               
 	               //description
 	               String description = rs.getString("description");
@@ -197,7 +196,7 @@ public class SQLRunner {
 	               FuelTransactionProductType productType = FuelTransactionProductType.REGULAR; //todo hardcoded
 	               
 				 
-				Transaction transaction = new Transaction(description,  driverName,  providerProductDesc,  
+				   Transaction transaction = new Transaction(description,  driverName,  providerProductDesc,  
 						 siteName,  vin,
 	           			 cost, currency.toUpperCase()
 	           			 ,dateTime,  location,  odometer,
@@ -247,7 +246,9 @@ public class SQLRunner {
 			+ "  and tx.station_id = s.id\n"
 			+ "  and titems.transaction_id = tx.id\n"
 			+ "  and tx.status = 'finished'\n"
-			+ "  and v.vin ='4S4BSANC8F3327518' order by tx.inserted_at DESC;";
+			+ "  and v.vin ='4S4BSANC8F3327518' "
+			+ "  and tx.inserted_at > ? "
+			+ "order by tx.inserted_at ASC;";
 
 	private static final String SQL_MAX_BATCH_JOB = "select Max(last_inserted_at) as last_inserted_at from batch_job_log where "
 			+ " job_name = 'FUEL_TX_GEOTAB_JOB' and "
@@ -259,5 +260,5 @@ public class SQLRunner {
 		        " (?, ?, ?, ?, ?, ?) ;";
 	 
 	 private static final String UPDATE_BATCH_JOB_SQL_STATUS = "UPDATE  batch_job_log SET " +
-		        "  status = ?, updated_at = ? WHERE job_id = ? ;" ;
+		        "  status = ?, updated_at = ?, last_inserted_at = ? WHERE job_id = ? ;" ;
 }

@@ -13,10 +13,13 @@ public class HelloHttpFunction implements HttpFunction {
 	 
   public void service(final HttpRequest request, final HttpResponse response) throws Exception {
 	 
-	 logger.info("I am an info log at : [ " + System.currentTimeMillis()+ " ]" );
-	 logger.warning("I am a warning log!");
+	 logger.info("GCP function info log at : [ " + System.currentTimeMillis()+ " ]" );
+	 logger.warning("GCP functiona warning log!");
 	    
+	 GeoTabConnector.connectToGeoTab();
+	 
      final BufferedWriter writer = response.getWriter();
-      writer.write("Hello world calling from GCP function");
+     
+     writer.write("GCP function done at  : [ " + System.currentTimeMillis()+ " ]" );
  }
 }

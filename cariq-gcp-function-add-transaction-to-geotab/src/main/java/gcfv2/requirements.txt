@@ -34,3 +34,29 @@ CREATE TABLE IF NOT EXISTS "public"."batch_job_log" (
 Resources :
  Jira issue : https://cariq.atlassian.net/browse/PLAT-4236
  GEOTAB API : https://geotab.github.io/sdk/software/api/reference/#FuelTransaction
+ 
+ // mock data
+ 	private static Transaction mockTx() {
+		Transaction tx = new Transaction();
+		// tx.setDescription("text tx");
+		tx.setDriverName("cariq");
+		tx.setProviderProductDesc("providerProd");
+		tx.setSiteName("casite");
+		tx.setVin("4S4BSANC8F3327518");
+		tx.setCost(new BigDecimal(30));
+		tx.setCurrencyCode("USD");
+		LocalDateTime dateTime = LocalDateTime.parse("2022-06-07T23:35:30");
+		tx.setDateTime(dateTime);
+		Coordinate location = new Coordinate();
+		location.setX(0);
+		location.setY(0);
+		tx.setLocation(location);
+		Double odometer = new Double(450);
+		tx.setOdometer(odometer);
+
+		tx.setProductType(FuelTransactionProductType.REGULAR);
+		Double volume = new Double(30);
+		tx.setVolume(volume);
+		return tx;
+	}
+ 

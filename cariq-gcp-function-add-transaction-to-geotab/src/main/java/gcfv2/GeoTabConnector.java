@@ -1,6 +1,5 @@
 package gcfv2;
 
-import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -17,9 +16,7 @@ import com.geotab.http.request.param.EntityParameters;
 import com.geotab.http.request.param.SearchParameters;
 import com.geotab.http.response.IdResponse;
 import com.geotab.model.Id;
-import com.geotab.model.coordinate.Coordinate;
 import com.geotab.model.entity.fuel.FuelTransaction;
-import com.geotab.model.entity.fuel.FuelTransactionProductType;
 import com.geotab.model.login.Credentials;
 import com.geotab.model.login.LoginResult;
 
@@ -29,6 +26,8 @@ public class GeoTabConnector {
 
 	public static void connectToGeoTab() {
 
+		 logger.info(" ########   START ########  ");
+		 
 		UUID jobId =  null;
 		try {
 			
@@ -44,15 +43,16 @@ public class GeoTabConnector {
 		
 			// check for size of the Tx list, if > 0; 
 			if (dblist.size() > 0) {
-				logger.info(" dblist size : " + dblist.size());
-
+				
 				// if dateTime != null, insert new row with pending status
 				jobId = UUID.randomUUID();
+				logger.info(" jobId : " + jobId);
+				 
 				SQLRunner.insertNewBatchLog("FUEL_TX_GEOTAB_JOB", last_inserted_dt, "pending", jobId,
 						"count : " + dblist.size());
 
 				List<Transaction> list = new ArrayList<Transaction>();
-				list.add(dblist.get(1)); // fix of now
+				list.add(dblist.get(1)); // TODO fix of now
 
 				// find list of VINs
 				List<FuelTransaction> ftList =
@@ -88,6 +88,7 @@ public class GeoTabConnector {
 						.build();
 
 				// call GeoTab APi and push data one by one
+				LocalDateTime last_inserted_at = null;
 				for (FuelTransaction tf : ftList) {
 					AuthenticatedRequest<?> request1 = AuthenticatedRequest.authRequestBuilder().method("Add").params(
 							EntityParameters.entityParamsBuilder().typeName("FuelTransaction").entity(tf).build())
@@ -95,13 +96,14 @@ public class GeoTabConnector {
 
 					Optional<Id> response = api.call(request1, IdResponse.class);
 
-					System.out.println(" response : " + response.get());
-
+					last_inserted_at = tf.getDateTime();
+					logger.info(" response : " + response.get());
+					logger.info(" last_inserted_at : " + last_inserted_at);
 				}
 
 				
 				// update to status = success
-				SQLRunner.updateBatchLog("success", jobId);
+				SQLRunner.updateBatchLog("success", jobId, Timestamp.valueOf(last_inserted_at));
 				
 				
 			} else {
@@ -109,37 +111,16 @@ public class GeoTabConnector {
 			}
 
 		} catch (Exception e) {
-			SQLRunner.updateBatchLog("failed", jobId);
+			SQLRunner.updateBatchLog("failed", jobId, null);
 			logger.log(Level.SEVERE, "Error in connectToGeoTab1 : [ " + System.currentTimeMillis() + " ]");
 			e.printStackTrace();
 		}
+		
+		 logger.info("########  END ########  ");
 
 	}
 
-	private static Transaction mockTx() {
-		Transaction tx = new Transaction();
-		// tx.setDescription("text tx");
-		tx.setDriverName("cariq");
-		tx.setProviderProductDesc("providerProd");
-		tx.setSiteName("casite");
-		tx.setVin("4S4BSANC8F3327518");
-		tx.setCost(new BigDecimal(30));
-		tx.setCurrencyCode("USD");
-		LocalDateTime dateTime = LocalDateTime.parse("2022-06-07T23:35:30");
-		tx.setDateTime(dateTime);
-		Coordinate location = new Coordinate();
-		location.setX(0);
-		location.setY(0);
-		tx.setLocation(location);
-		Double odometer = new Double(450);
-		tx.setOdometer(odometer);
-
-		tx.setProductType(FuelTransactionProductType.REGULAR);
-		Double volume = new Double(30);
-		tx.setVolume(volume);
-		return tx;
-	}
-
+    // to test it locally 
 	public static void main(String args[]) {
 		connectToGeoTab();
 
