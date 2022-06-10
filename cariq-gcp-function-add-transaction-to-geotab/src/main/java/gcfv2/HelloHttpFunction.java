@@ -9,14 +9,17 @@ import com.google.cloud.functions.HttpResponse;
 
 public class HelloHttpFunction implements HttpFunction {
 	
-	 private static final Logger logger = Logger.getLogger(HelloHttpFunction.class.getName());
+ private static final Logger logger = Logger.getLogger(HelloHttpFunction.class.getName());
 	 
- public void service(final HttpRequest request, final HttpResponse response) throws Exception {
+  public void service(final HttpRequest request, final HttpResponse response) throws Exception {
 	 
-	 logger.info("I am an info log at : [ " + System.currentTimeMillis()+ " ]" );
-	 logger.warning("I am a warning log!");
+	 logger.info("GCP function info log at : [ " + System.currentTimeMillis()+ " ]" );
+	 logger.warning("GCP functiona warning log!");
 	    
+	 GeoTabConnector.connectToGeoTab();
+	 
      final BufferedWriter writer = response.getWriter();
-      writer.write("Hello world calling from GCP function");
+     
+     writer.write("GCP function done at  : [ " + System.currentTimeMillis()+ " ]" );
  }
 }

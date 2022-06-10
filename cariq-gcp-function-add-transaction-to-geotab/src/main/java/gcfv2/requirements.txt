@@ -1,0 +1,62 @@
+
+
+ Title :
+ 
+ 1. This job look into Fuel_transaction table and pull records > last_inserted_at from batch_job_log
+ 2. fetch all the Fuel_transaction list with vin numbers.
+ 3. push this data to GEOTab FuelTransaction API.
+
+
+// --- initialize database with below query if tables not exists
+
+-- Sequence and defined type
+CREATE SEQUENCE IF NOT EXISTS batch_job_log_id_seq;
+
+-- Table Definition
+CREATE TABLE IF NOT EXISTS "public"."batch_job_log" (
+    "id" int4 NOT NULL DEFAULT nextval('batch_job_log_id_seq'::regclass),
+    "job_id" uuid NOT NULL,
+    "job_name" VARCHAR(20) NOT NULL,
+    "last_inserted_at" timestamp,
+    "status" VARCHAR(10) NOT NULL,
+    "inserted_at" timestamp NOT NULL DEFAULT now(),
+    "updated_at" timestamp,
+    "log" VARCHAR(20),
+    PRIMARY KEY ("id")
+);
+
+-- insert last_inserted_at to run the job afterwards
+	INSERT INTO "public"."batch_job_log" ("id", "job_name", "last_inserted_at", "status", "inserted_at", "log") VALUES
+	(3, 'AA', NULL, 'pending', '2022-06-10 06:37:33.109248', 'test job');
+
+
+
+Resources :
+ Jira issue : https://cariq.atlassian.net/browse/PLAT-4236
+ GEOTAB API : https://geotab.github.io/sdk/software/api/reference/#FuelTransaction
+ 
+ // mock data
+ 	private static Transaction mockTx() {
+		Transaction tx = new Transaction();
+		// tx.setDescription("text tx");
+		tx.setDriverName("cariq");
+		tx.setProviderProductDesc("providerProd");
+		tx.setSiteName("casite");
+		tx.setVin("4S4BSANC8F3327518");
+		tx.setCost(new BigDecimal(30));
+		tx.setCurrencyCode("USD");
+		LocalDateTime dateTime = LocalDateTime.parse("2022-06-07T23:35:30");
+		tx.setDateTime(dateTime);
+		Coordinate location = new Coordinate();
+		location.setX(0);
+		location.setY(0);
+		tx.setLocation(location);
+		Double odometer = new Double(450);
+		tx.setOdometer(odometer);
+
+		tx.setProductType(FuelTransactionProductType.REGULAR);
+		Double volume = new Double(30);
+		tx.setVolume(volume);
+		return tx;
+	}
+ 
