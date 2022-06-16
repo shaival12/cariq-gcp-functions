@@ -16,8 +16,12 @@ import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import javax.sql.DataSource;
+
 import com.geotab.model.coordinate.Coordinate;
 import com.geotab.model.entity.fuel.FuelTransactionProductType;
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
 
 public class SQLRunner {
 
@@ -25,7 +29,12 @@ public class SQLRunner {
 	
     private static final String url = "jdbc:postgresql://10.21.1.3:5432/cariq_prod";
     private static final String user = "shaival";
-    private static final String password = "4QQEKJn4uRtwtzD2";
+    private static final String password = "";
+
+	private static final Object DB_NAME = "cariq_prod";
+	private static final String DB_USER = "shaival";
+	private static final String DB_PASS = "";
+	private static final String INSTANCE_CONNECTION_NAME = "cloud-fn-psql-db-connetr";
     
 	public static void main(String[] args) {
 		
@@ -112,7 +121,7 @@ public class SQLRunner {
 	 * @param date
 	 * @return
 	 */
-	public static Timestamp findMaxBatchLogForFuelTxJob() {
+	public static Timestamp findMaxBatchLogForFuelTxJobOld() {
 
 		try (Connection con = DriverManager.getConnection(url, user, password);
 				Statement st = con.createStatement();
@@ -142,6 +151,74 @@ public class SQLRunner {
 		}
 		return null;
 	}
+	
+	 public static Connection getConnection() throws SQLException {
+		 
+			HikariConfig config = new HikariConfig();
+				
+			//jdbc:postgresql://10.21.1.3:5432/cariq_prod
+			// Configure which instance and what database user to connect with.
+			config.setJdbcUrl(String.format("jdbc:postgresql:///%s", "10.21.1.3:5432/cariq_prod"));
+			config.setUsername(DB_USER); // e.g. "root", "postgres"
+			config.setPassword(DB_PASS); // e.g. "my-password"
+	
+			config.addDataSourceProperty("socketFactory", "com.google.cloud.sql.postgres.SocketFactory");
+			config.addDataSourceProperty("cloudSqlInstance", INSTANCE_CONNECTION_NAME);
+	
+	
+			// The ipTypes argument can be used to specify a comma delimited list of preferred IP types 
+			// for connecting to a Cloud SQL instance. The argument ipTypes=PRIVATE will force the 
+			// SocketFactory to connect with an instance's associated private IP. 
+			config.addDataSourceProperty("ipTypes", "PUBLIC,PRIVATE");
+	
+			// ... Specify additional connection properties here.
+			// ...
+	
+			// Initialize the connection pool using the configuration object.
+			DataSource pool = new HikariDataSource(config);
+	
+				
+	        return pool.getConnection();
+	    }
+	
+	
+	/**
+	 * find max insertDate from batch_job_log table by Hikari
+	 * @param date
+	 * @return
+	 */
+	public static Timestamp findMaxBatchLogForFuelTxJob() {
+		
+		
+		try (Connection con = getConnection();
+				Statement st = con.createStatement();
+				ResultSet rs = st.executeQuery(SQL_MAX_BATCH_JOB)) {
+
+			while (rs.next()) {
+
+				try {
+					return rs.getTimestamp("last_inserted_at");
+
+				} catch (Exception e) {
+					e.printStackTrace();
+					logger.log(Level.SEVERE,
+							"Error in findMaxBatchLogForFuelTxJob while processing resultset : " + e.getMessage());
+				}
+
+			}
+
+			rs.close();
+			st.close();
+			con.close();
+
+		} catch (SQLException ex) {
+			ex.printStackTrace();
+			logger.log(Level.SEVERE,
+					"Error in findMaxBatchLogForFuelTxJob : [ " + System.currentTimeMillis() + " ]" + ex.getMessage());
+		}
+		return null;
+	}
+
 
 	/**
 	 *  
