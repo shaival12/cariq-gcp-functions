@@ -35,6 +35,23 @@ Resources :
  Jira issue : https://cariq.atlassian.net/browse/PLAT-4236
  GEOTAB API : https://geotab.github.io/sdk/software/api/reference/#FuelTransaction
  
+ // query 
+  select u.full_name as driverName,  s.name as siteName, v.vin, "
++ " vs.odometer as odometer, "
++ " ST_X(ST_AsText(tx.location)) as long, ST_Y(ST_AsText(tx.location)) as lat , "
++ " tx.currency, tx.total_amount as cost,  tx.time, "
++ " titems.quantity as volume, titems.description as description, v.fleet_id as fleetid"
++ " from transactions tx, vehicles v, users u, vehicle_states vs, stations s, transaction_items titems\n"
++ " where tx.vehicle_id = v.id \n"
++ "  and v.id = vs.vehicle_id\n"
++ "  and tx.user_id = u.id\n"
++ "  and tx.station_id = s.id\n"
++ "  and titems.transaction_id = tx.id\n"
++ "  and tx.status = 'finished'\n"
++ "  and v.fleet_id in (?) "
++ "  and tx.time > ? "
++ "order by tx.time ASC;";
+			
  // mock data
  	private static Transaction mockTx() {
 		Transaction tx = new Transaction();
