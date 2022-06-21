@@ -14,12 +14,12 @@ public class HelloHttpFunction implements HttpFunction {
   public void service(final HttpRequest request, final HttpResponse response) throws Exception {
 	 
 	 logger.info("GCP function info log at : [ " + System.currentTimeMillis()+ " ]" );
-	 logger.warning("GCP functiona warning log!");
 	    
-	 GeoTabConnector.connectToGeoTab();
+	  GeoTabConnector geo = new GeoTabConnector();
+      geo.connectToGeoTab();
 	 
      final BufferedWriter writer = response.getWriter();
      
-     writer.write("GCP function done at  : [ " + System.currentTimeMillis()+ " ]" );
+     writer.write("GCP function completed at  : [ " + System.currentTimeMillis()+ " ]" );
  }
 }

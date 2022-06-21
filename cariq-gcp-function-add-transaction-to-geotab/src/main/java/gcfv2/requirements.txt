@@ -42,7 +42,7 @@ Resources :
 		tx.setDriverName("cariq");
 		tx.setProviderProductDesc("providerProd");
 		tx.setSiteName("casite");
-		tx.setVin("4S4BSANC8F3327518");
+		tx.setVin("");//VIN
 		tx.setCost(new BigDecimal(30));
 		tx.setCurrencyCode("USD");
 		LocalDateTime dateTime = LocalDateTime.parse("2022-06-07T23:35:30");
