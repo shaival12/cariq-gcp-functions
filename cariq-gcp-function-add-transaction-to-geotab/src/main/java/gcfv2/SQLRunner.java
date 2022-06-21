@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 import javax.sql.DataSource;
 
@@ -26,21 +27,53 @@ import com.zaxxer.hikari.HikariDataSource;
 public class SQLRunner {
 
 	private static final Logger logger = Logger.getLogger(SQLRunner.class.getName());
-	
-    private static final String url = "jdbc:postgresql://10.21.1.3:5432/cariq_prod";
-    private static final String user = "shaival";
-    private static final String password = "";
 
-	private static final Object DB_NAME = "cariq_prod";
-	private static final String DB_USER = "shaival";
-	private static final String DB_PASS = "";
-	private static final String INSTANCE_CONNECTION_NAME = "cloud-fn-psql-db-connetr";
+	private static final Object DB_NAME = Constants.DB_NAME;
+	private static final String DB_USER = Constants.DB_USER;
+	private static final String DB_PASS = Constants.DB_PASS;
+	private static final String INSTANCE_CONNECTION_NAME = Constants.INSTANCE_CONNECTION_NAME; //prod
     
 	public static void main(String[] args) {
 		
-		System.out.println(SQLRunner.findMaxBatchLogForFuelTxJob());
+		SQLRunner sqlRunner = new SQLRunner();
+		System.out.println(sqlRunner.findMaxBatchLogForFuelTxJob());
 	
     }
+	
+	/**
+	 * get connection with Postgres DB
+	 * @return
+	 * @throws SQLException
+	 */
+	 public Connection getConnection() throws SQLException {
+		 
+			HikariConfig config = new HikariConfig();
+				
+			// Configure which instance and what database user to connect with.
+			config.setJdbcUrl(String.format("jdbc:postgresql:///%s", "cariq_prod"));
+			config.setUsername(DB_USER); // e.g. "root", "postgres"
+			config.setPassword(DB_PASS); // e.g. "my-password"
+	        config.setMaximumPoolSize(3);
+            config.setMinimumIdle(1);
+			config.addDataSourceProperty("socketFactory", "com.google.cloud.sql.postgres.SocketFactory");
+			config.addDataSourceProperty("cloudSqlInstance", INSTANCE_CONNECTION_NAME);
+	
+	
+			// The ipTypes argument can be used to specify a comma delimited list of preferred IP types 
+			// for connecting to a Cloud SQL instance. The argument ipTypes=PRIVATE will force the 
+			// SocketFactory to connect with an instance's associated private IP. 
+			config.addDataSourceProperty("ipTypes", "PRIVATE");
+	
+			// ... Specify additional connection properties here.
+			// ...
+	
+			// Initialize the connection pool using the configuration object.
+			DataSource pool = new HikariDataSource(config);
+	
+				
+	        return pool.getConnection();
+	    }
+	
 	
 	
 	/**
@@ -51,10 +84,10 @@ public class SQLRunner {
 	 * @param jobId
 	 * @return
 	 */
-	public static int insertNewBatchLog(String jobName, Timestamp lastInsertedDT, String status, UUID jobId, String log ) {
+	public  int insertNewBatchLog(String jobName, Timestamp lastInsertedDT, String status, UUID jobId, String log ) {
 
 		int result = 0;
-		try (Connection con = DriverManager.getConnection(url, user, password);
+		try (Connection con = getConnection();
 				Statement st = con.createStatement();
 				PreparedStatement preparedStatement = con.prepareStatement(INSERT_BATCH_JOB_SQL_PENDING_STATUS)) {
 			preparedStatement.setString(1, jobName);
@@ -87,10 +120,10 @@ public class SQLRunner {
 	 *  update status in BatchLog 
 	 *  
 	 **/
-	public static int updateBatchLog(String status, UUID jobId, Timestamp lastInsertedDT) {
+	public  int updateBatchLog(String status, UUID jobId, Timestamp lastInsertedDT) {
 
 		int result = 0;
-		try (Connection con = DriverManager.getConnection(url, user, password);
+		try (Connection con = getConnection();
 				Statement st = con.createStatement();
 				PreparedStatement preparedStatement = con.prepareStatement(UPDATE_BATCH_JOB_SQL_STATUS)) {
 
@@ -121,9 +154,9 @@ public class SQLRunner {
 	 * @param date
 	 * @return
 	 */
-	public static Timestamp findMaxBatchLogForFuelTxJobOld() {
+	public  Timestamp findMaxBatchLogForFuelTxJobOld() {
 
-		try (Connection con = DriverManager.getConnection(url, user, password);
+		try (Connection con = getConnection();
 				Statement st = con.createStatement();
 				ResultSet rs = st.executeQuery(SQL_MAX_BATCH_JOB)) {
 
@@ -152,34 +185,6 @@ public class SQLRunner {
 		return null;
 	}
 	
-	 public static Connection getConnection() throws SQLException {
-		 
-			HikariConfig config = new HikariConfig();
-				
-			//jdbc:postgresql://10.21.1.3:5432/cariq_prod
-			// Configure which instance and what database user to connect with.
-			config.setJdbcUrl(String.format("jdbc:postgresql:///%s", "10.21.1.3:5432/cariq_prod"));
-			config.setUsername(DB_USER); // e.g. "root", "postgres"
-			config.setPassword(DB_PASS); // e.g. "my-password"
-	
-			config.addDataSourceProperty("socketFactory", "com.google.cloud.sql.postgres.SocketFactory");
-			config.addDataSourceProperty("cloudSqlInstance", INSTANCE_CONNECTION_NAME);
-	
-	
-			// The ipTypes argument can be used to specify a comma delimited list of preferred IP types 
-			// for connecting to a Cloud SQL instance. The argument ipTypes=PRIVATE will force the 
-			// SocketFactory to connect with an instance's associated private IP. 
-			config.addDataSourceProperty("ipTypes", "PUBLIC,PRIVATE");
-	
-			// ... Specify additional connection properties here.
-			// ...
-	
-			// Initialize the connection pool using the configuration object.
-			DataSource pool = new HikariDataSource(config);
-	
-				
-	        return pool.getConnection();
-	    }
 	
 	
 	/**
@@ -187,7 +192,7 @@ public class SQLRunner {
 	 * @param date
 	 * @return
 	 */
-	public static Timestamp findMaxBatchLogForFuelTxJob() {
+	public  Timestamp findMaxBatchLogForFuelTxJob() {
 		
 		
 		try (Connection con = getConnection();
@@ -227,13 +232,26 @@ public class SQLRunner {
 	 * @param password
 	 * @return
 	 */
-	public static List<Transaction>  fetchFuelTransactionResults(Timestamp timeStamp) {
+	public  List<Transaction>  fetchFuelTransactionResults(Timestamp timeStamp, List<String> fleetIds) {
 		
 		List<Transaction> list = new ArrayList<Transaction>();
+
+    String sql = SQL_FETCH_FUEL_TX;
 		
-		try (Connection con = DriverManager.getConnection(url, user, password);
+		if(fleetIds.size() > 0) {
+			
+			 String sqlIN = fleetIds.stream()
+						.map(x -> String.valueOf(x))
+						.collect(Collectors.joining(",", "(", ")"));
+						
+			        sql = sql.replace("(?)", sqlIN);
+			
+		}
+    	logger.info("SQL" + sql);
+		
+		try (Connection con = getConnection();
                 Statement st = con.createStatement();
-                PreparedStatement preparedStatement = con.prepareStatement(SQL_FETCH_FUEL_TX)) {
+                PreparedStatement preparedStatement = con.prepareStatement(sql)) {
 			
 				preparedStatement.setTimestamp(1, timeStamp);
 				ResultSet rs = preparedStatement.executeQuery();
@@ -249,7 +267,7 @@ public class SQLRunner {
 	               //odometer
 	               Integer odstr = rs.getInt("odometer");
 	               //logger.info("odstr1 :" + odstr);
-	               double odometer = milesTokm(new Double(odstr));
+	               double odometer = metersToKM(new Double(odstr));
 	               //logger.info("odometer KM :" + odometer);
 	               
 	               //location
@@ -258,26 +276,27 @@ public class SQLRunner {
 	       		   location.setY(rs.getDouble("lat"));
 	               
 	               String currency = rs.getString("currency");
-	               Timestamp time = rs.getTimestamp("inserted_at");
+	               Timestamp time = rs.getTimestamp("time");
 	               LocalDateTime dateTime = time.toLocalDateTime();
 	               
 	               //volume
 	               Double volume = rs.getDouble("volume");
 	               //logger.info("volume :" + volume); //gallon to liiter
 	               volume =  gallonToLiter(volume);
-	               logger.info("volume in lt :" + volume);
+	               //logger.info("volume in lt :" + volume);
 	               
 	               //description
 	               String description = rs.getString("description");
 	               String providerProductDesc = "unknown";
 	               FuelTransactionProductType productType = FuelTransactionProductType.REGULAR; //todo hardcoded
 	               
+	               String fleetId = rs.getString("fleetid");
 				 
 				   Transaction transaction = new Transaction(description,  driverName,  providerProductDesc,  
 						 siteName,  vin,
 	           			 cost, currency.toUpperCase()
 	           			 ,dateTime,  location,  odometer,
-	        			 productType,  volume);
+	        			 productType,  volume, fleetId);
 	               
 				   list.add(transaction);
 				   
@@ -303,6 +322,10 @@ public class SQLRunner {
 		return list;
 	}
 	
+   private static double metersToKM(double distanceInMeters) {
+	        return distanceInMeters * 0.001;
+	    }
+
 	 private static double milesTokm(double distanceInMiles) {
 	        return distanceInMiles * 1.609344;
 	    }
@@ -311,11 +334,12 @@ public class SQLRunner {
 		return  volumeInGallon * 3.7854118;
 	 }
 	 
+   //+ "  and v.vin ='4S4BSANC8F3327518' "
 	private static final String SQL_FETCH_FUEL_TX = "select u.full_name as driverName,  s.name as siteName, v.vin, "
 			+ " vs.odometer as odometer, "
 			+ " ST_X(ST_AsText(tx.location)) as long, ST_Y(ST_AsText(tx.location)) as lat , "
-			+ " tx.currency, tx.total_amount as cost,  tx.inserted_at, "
-			+ " titems.quantity as volume, titems.description as description "
+			+ " tx.currency, tx.total_amount as cost,  tx.time, "
+			+ " titems.quantity as volume, titems.description as description, v.fleet_id as fleetid"
 			+ " from transactions tx, vehicles v, users u, vehicle_states vs, stations s, transaction_items titems\n"
 			+ " where tx.vehicle_id = v.id \n"
 			+ "  and v.id = vs.vehicle_id\n"
@@ -323,9 +347,9 @@ public class SQLRunner {
 			+ "  and tx.station_id = s.id\n"
 			+ "  and titems.transaction_id = tx.id\n"
 			+ "  and tx.status = 'finished'\n"
-			+ "  and v.vin ='4S4BSANC8F3327518' "
-			+ "  and tx.inserted_at > ? "
-			+ "order by tx.inserted_at ASC;";
+		  + "  and v.fleet_id in (?) "
+			+ "  and tx.time > ? "
+			+ "order by tx.time ASC;";
 
 	private static final String SQL_MAX_BATCH_JOB = "select Max(last_inserted_at) as last_inserted_at from batch_job_log where "
 			+ " job_name = 'FUEL_TX_GEOTAB_JOB' and "
@@ -339,3 +363,4 @@ public class SQLRunner {
 	 private static final String UPDATE_BATCH_JOB_SQL_STATUS = "UPDATE  batch_job_log SET " +
 		        "  status = ?, updated_at = ?, last_inserted_at = ? WHERE job_id = ? ;" ;
 }
+

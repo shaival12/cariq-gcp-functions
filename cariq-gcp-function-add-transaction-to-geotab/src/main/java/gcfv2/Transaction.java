@@ -20,6 +20,7 @@ public class Transaction {
 	private Double odometer;
 	private FuelTransactionProductType productType;
 	private Double volume;
+	private String fleetId;
 	
 	
 	
@@ -27,7 +28,7 @@ public class Transaction {
 	
 	public Transaction(String description, String driverName, String providerProductDesc, String siteName, String vin,
 			BigDecimal cost, String currencyCode, LocalDateTime dateTime, Coordinate location, Double odometer,
-			FuelTransactionProductType productType, Double volume) {
+			FuelTransactionProductType productType, Double volume, String fleetId) {
 		super();
 		this.description = description;
 		this.driverName = driverName;
@@ -41,6 +42,7 @@ public class Transaction {
 		this.odometer = odometer;
 		this.productType = productType;
 		this.volume = volume;
+		this.fleetId = fleetId;
 	}
 	public Transaction() {
 		super();
@@ -116,6 +118,13 @@ public class Transaction {
 	}
 	public void setVolume(Double volume) {
 		this.volume = volume;
+	}
+	
+	public String getFleetId() {
+		return fleetId;
+	}
+	public void setFleetId(String fleetId) {
+		this.fleetId = fleetId;
 	}
 	@Override
 	public String toString() {
