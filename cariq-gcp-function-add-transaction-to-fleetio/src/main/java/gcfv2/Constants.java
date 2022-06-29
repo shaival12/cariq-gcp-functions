@@ -15,4 +15,9 @@ public interface Constants {
 	static final String account = "";
   static final int FLEETIO_FULE_TYPE_ID_GAS = 309829;
 	static final boolean FLEETIO_TEST = true;
+	
+	//secret info
+	 static final String SECRET_VERSION = "latest";
+	 static final String SECRET_NAME = "geotab_api_credentials";
+	 static final String GCP_PROJECT_NAME = "cariq-vehicle-data-test";
 }

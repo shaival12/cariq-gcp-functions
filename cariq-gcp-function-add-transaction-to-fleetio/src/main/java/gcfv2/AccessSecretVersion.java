@@ -12,11 +12,15 @@ import java.util.zip.Checksum;
 
 public class AccessSecretVersion {
 
-  public static String accessSecretVersion() throws IOException {
-    // TODO(developer): Replace these variables before running the sample.
-    String projectId = "cariq-vehicle-data-test"; //project id
-    String secretId = "geotab_api_credentials"; //your-secret-id";
-    String versionId = "latest"; //version
+private static final String SECRET_VERSION = Constants.SECRET_VERSION;
+private static final String SECRET_NAME = Constants.SECRET_NAME;
+private static final String GCP_PROJECT_NAME = Constants.GCP_PROJECT_NAME;
+
+public static String accessSecretVersion() throws IOException {
+  
+    String projectId = GCP_PROJECT_NAME; //project id
+    String secretId = SECRET_NAME; //your-secret-id";
+    String versionId = SECRET_VERSION; //version
     return accessSecretVersion(projectId, secretId, versionId);
     //return getSecret(projectId, secretId);
   }
