@@ -1,0 +1,253 @@
+package gcfv2;
+
+import java.sql.Timestamp;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import java.util.stream.Collectors;
+
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import gcfv2.fleetio.FleetioConnector;
+import gcfv2.fleetio.FleetioRequest;
+import gcfv2.fleetio.Meter_entry_attributes;
+
+/**
+ * Job Processor for all GCP function jobs
+ * @author shaival
+ *
+ */
+public class JobProcessor {
+
+	private static final Logger logger = Logger.getLogger(JobProcessor.class.getName());
+
+	public void process() {
+
+		logger.info(" ########   START ########  ");
+
+		SQLRunner sqlRunner = new SQLRunner();
+		UUID jobId = null;
+		try {
+
+			List<String> fleetIds = new ArrayList<String>();
+			List<Fleet> fleetList = null;
+
+			// access secrets
+			try {
+				String secrets = AccessSecretVersion.accessSecretVersion();
+				logger.info("[Step 1] : get secrets ");
+
+				ObjectMapper mapper = new ObjectMapper();
+				fleetList = mapper.readValue(secrets.toLowerCase(), new TypeReference<List<Fleet>>() {
+				});
+
+				if (fleetList != null && fleetList.size() > 0) {
+					fleetIds = fleetList.stream().map(e -> "'" + e.getFleetid() + "'").collect(Collectors.toList());
+					System.out.println("fleetIds size from secrets :" + fleetIds.size());
+				}
+
+			} catch (Exception ep) {
+				ep.printStackTrace();
+				System.out.println("Error while getting secrets :" + ep);
+			}
+
+			// find last_inserted_dt from batch_job_log table
+			if (fleetList != null && fleetList.size() > 0) {
+
+				Timestamp last_inserted_dt = sqlRunner.findMaxBatchLogForFuelTxJob();
+				logger.info("[ Step 2 ]:  last_inserted_dt from batch_job_log table : [" + last_inserted_dt + " ]");
+
+				// push data 
+				pushData(sqlRunner, jobId, fleetIds, last_inserted_dt, fleetList);
+
+			}
+
+		} catch (Exception e) {
+			logger.log(Level.SEVERE, "Error in JobProcessor.process : [ " + e.getMessage() + " ]");
+			e.printStackTrace();
+		}
+
+		logger.info("########  END ########  ");
+
+	}
+
+	private void pushData(SQLRunner sqlRunner, UUID jobId, List<String> fleetIds, Timestamp lastInsertedAt,
+			List<Fleet> fleetList) throws Exception {
+
+		LocalDateTime last_inserted_at = null;
+
+		// fetch records, if > 0 : run Job else not
+		List<Transaction> dblist = sqlRunner.fetchFuelTransactionResults(lastInsertedAt, fleetIds);
+		logger.info("[Step 3]: get fuel Transaction records given fleet ids,  dblist size : " + dblist.size());
+
+		// check for size of the Tx list, if > 1;
+		if (dblist.size() > 0) {
+
+			// if dateTime != null, insert new row with pending status
+			jobId = UUID.randomUUID();
+			logger.info(" new jobId : " + jobId);
+
+			// add a job with pending status
+			sqlRunner.insertNewBatchLog("FUEL_TX_FLEETIO_JOB", lastInsertedAt, "pending", jobId, "T:" + dblist.size());
+
+			List<Transaction> successFulList = new ArrayList<Transaction>();
+			Timestamp lastSuccess = null;
+			try {
+				lastSuccess = pushDataByFleet(fleetList, last_inserted_at, dblist, successFulList);
+				logger.info("successFulList  : " + successFulList.size());
+
+			} catch (Exception e) {
+				logger.info("in catch, lastSuccess  : " + lastSuccess);
+				logger.log(Level.SEVERE, "Error in pushData : [ " + e.getMessage() + " ]");
+				e.printStackTrace();
+			} finally {
+				// find the last success run and update table
+				logger.info("in finally, lastSuccess  : " + lastSuccess);
+				logger.info("in finally, successCount  : " + successFulList.size());
+				if (lastSuccess != null) {
+					sqlRunner.updateBatchLog("success", jobId, lastSuccess != null ? lastSuccess : lastInsertedAt);
+				} else {
+					sqlRunner.updateBatchLog("failed", jobId, lastSuccess != null ? lastSuccess : lastInsertedAt);
+
+				}
+			}
+
+		} else {
+			logger.info(" No Job will run as dblist size : " + dblist.size());
+		}
+
+	}
+
+	// send to fleetio all successful transactions
+	private void sendToFleetio(List<Transaction> successFulList) {
+		logger.info("inside sendToFleetio  : " + successFulList.size());
+		FleetioConnector fleetioConnector = new FleetioConnector();
+	
+		for (Transaction t : successFulList) {
+		
+				try {
+					String vin = t.getVin();
+                   int odometer = t.getOdometer().intValue();
+                   FleetioRequest request = new FleetioRequest();
+		          if (Constants.FLEETIO_TEST) {
+		            	logger.info("running in test mode : " + Constants.FLEETIO_TEST);
+		              if(!vin.equalsIgnoreCase("1C4RJFLG2JC419001")){
+		                 continue;
+		             }
+								//vin = "1C4RJFLG2JC419001";
+								odometer = 1111;
+								request.setVehicle_id(1958594);
+					}
+
+					
+
+					request.setLiters(t.getVolume());
+					request.setUs_gallons(literToGallon(t.getVolume()));
+					request.setPrice_per_volume_unit(t.getUnitPrice());
+					request.setPersonal(null);
+					request.setPartial(null);
+					request.setStationName(t.getSiteName());
+					
+					request.setMeter_entry_attributes(new Meter_entry_attributes(odometer));
+
+					request.setFuel_type_id(Constants.FLEETIO_FULE_TYPE_ID_GAS); // todo Fleetio FuelType for Gas
+					request.setDate(t.getDateTime());
+
+					fleetioConnector.sendToFleetio(vin, request);
+					logger.info("done sendToFleetio  for vin: " + vin);
+				} catch (Exception e) {
+					logger.log(Level.SEVERE, "Error in sendToFleetio : [ " + e.getMessage() + " ]");
+					e.printStackTrace();
+				}
+
+			}
+		
+	}
+
+	private static double literToGallon(double volumeInLiter) {
+		return volumeInLiter * 0.219969;
+	}
+
+	private Timestamp pushDataByFleet(List<Fleet> fleetList, LocalDateTime last_inserted_at, List<Transaction> list,
+			List<Transaction> successFulList) throws Exception {
+		logger.info(" pushDataByFleet ");
+
+		// find last insertedDate
+		Timestamp lastSuccess = null;
+
+		try {
+
+			int counter = 1;
+			for (Transaction t : list) {
+
+				String fleetId = t.getFleetId();
+				Fleet fleet = getFleet(fleetList, fleetId);
+				logger.info(" fleet id : " + fleet.getFleetid());
+
+				if (fleet != null) {
+					try {
+
+						logger.info(counter++ + ") before calling api for  : " + t.getVin() + " -- " + t.getDateTime());
+
+						String vin = t.getVin();
+
+						FleetioRequest request = new FleetioRequest();
+
+						request.setLiters(t.getVolume());
+						request.setUs_gallons(literToGallon(t.getVolume()));
+						request.setPrice_per_volume_unit(t.getUnitPrice());
+						request.setPersonal(null);
+						request.setPartial(null);
+						request.setStationName(t.getSiteName());
+						int odometer = t.getOdometer().intValue();
+
+						if (Constants.FLEETIO_TEST) {
+							vin = "1C4RJFLG2JC419001";
+							odometer = 1111;
+							request.setVehicle_id(1958594);
+						}
+						request.setMeter_entry_attributes(new Meter_entry_attributes(odometer));
+						request.setFuel_type_id(Constants.FLEETIO_FULE_TYPE_ID_GAS); // todo Fleetio FuelType for Gas
+						request.setDate(t.getDateTime());
+
+						// call connector and send Fuel Tx to Fleetio
+						FleetioConnector fleetioConnector = new FleetioConnector();
+						fleetioConnector.sendToFleetio(vin, request);
+						logger.info("done sendToFleetio  for vin: " + vin);
+
+						lastSuccess = Timestamp.valueOf(t.getDateTime());
+						successFulList.add(t);
+
+					} catch (Exception exx) {
+						logger.info("Error while calling Fleetio API, Exception log message and proceed : [ "
+								+ exx.getMessage() + " ]");
+						exx.printStackTrace();
+						throw exx;
+					}
+
+				}
+
+			} // loop ends
+		} catch (Exception et) {
+			logger.log(Level.SEVERE, "Error in pushDataByFleet, coming out of loop : [ " + et.getMessage() + " ]");
+		}
+
+		logger.info(" before return lastSuccess : [" + lastSuccess + "]");
+		return lastSuccess;
+	}
+
+	private Fleet getFleet(List<Fleet> fleetList, String fleetId) {
+		for (Fleet fleet : fleetList) {
+			if (fleet.getFleetid().equalsIgnoreCase(fleetId)) {
+				return fleet;
+			}
+		}
+
+		return null;
+	}
+
+}
