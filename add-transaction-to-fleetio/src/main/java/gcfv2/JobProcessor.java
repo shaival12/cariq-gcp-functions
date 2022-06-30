@@ -122,52 +122,7 @@ public class JobProcessor {
 
 	}
 
-	// send to fleetio all successful transactions
-	private void sendToFleetio(List<Transaction> successFulList) {
-		logger.info("inside sendToFleetio  : " + successFulList.size());
-		FleetioConnector fleetioConnector = new FleetioConnector();
 	
-		for (Transaction t : successFulList) {
-		
-				try {
-					String vin = t.getVin();
-                   int odometer = t.getOdometer().intValue();
-                   FleetioRequest request = new FleetioRequest();
-		          if (Constants.FLEETIO_TEST) {
-		            	logger.info("running in test mode : " + Constants.FLEETIO_TEST);
-		              if(!vin.equalsIgnoreCase("1C4RJFLG2JC419001")){
-		                 continue;
-		             }
-								//vin = "1C4RJFLG2JC419001";
-								odometer = 1111;
-								request.setVehicle_id(1958594);
-					}
-
-					
-
-					request.setLiters(t.getVolume());
-					request.setUs_gallons(literToGallon(t.getVolume()));
-					request.setPrice_per_volume_unit(t.getUnitPrice());
-					request.setPersonal(null);
-					request.setPartial(null);
-					request.setStationName(t.getSiteName());
-					
-					request.setMeter_entry_attributes(new Meter_entry_attributes(odometer));
-
-					request.setFuel_type_id(Constants.FLEETIO_FULE_TYPE_ID_GAS); // todo Fleetio FuelType for Gas
-					request.setDate(t.getDateTime());
-
-					fleetioConnector.sendToFleetio(vin, request);
-					logger.info("done sendToFleetio  for vin: " + vin);
-				} catch (Exception e) {
-					logger.log(Level.SEVERE, "Error in sendToFleetio : [ " + e.getMessage() + " ]");
-					e.printStackTrace();
-				}
-
-			}
-		
-	}
-
 	private static double literToGallon(double volumeInLiter) {
 		return volumeInLiter * 0.219969;
 	}
@@ -184,8 +139,8 @@ public class JobProcessor {
 			int counter = 1;
 			for (Transaction t : list) {
 
-				String fleetId = t.getFleetId();
-				Fleet fleet = getFleet(fleetList, fleetId);
+				
+				Fleet fleet = getFleet(fleetList, t.getFleetId());
 				logger.info(" fleet id : " + fleet.getFleetid());
 
 				if (fleet != null) {
@@ -194,8 +149,14 @@ public class JobProcessor {
 						logger.info(counter++ + ") before calling api for  : " + t.getVin() + " -- " + t.getDateTime());
 
 						String vin = t.getVin();
-
+					
 						FleetioRequest request = new FleetioRequest();
+						double odometer = t.getOdometer();
+						if (Constants.FLEETIO_TEST) {
+							vin = Constants.FLEETIO_TEST_VIN; //"1C4RJFLG2JC419001";
+							 odometer = Constants.FLEETIO_TEST_ODOMETER;
+							//request.setVehicle_id(1958594);
+						}
 
 						request.setLiters(t.getVolume());
 						request.setUs_gallons(literToGallon(t.getVolume()));
@@ -203,13 +164,6 @@ public class JobProcessor {
 						request.setPersonal(null);
 						request.setPartial(null);
 						request.setStationName(t.getSiteName());
-						int odometer = t.getOdometer().intValue();
-
-						if (Constants.FLEETIO_TEST) {
-							vin = "1C4RJFLG2JC419001";
-							odometer = 1111;
-							request.setVehicle_id(1958594);
-						}
 						request.setMeter_entry_attributes(new Meter_entry_attributes(odometer));
 						request.setFuel_type_id(Constants.FLEETIO_FULE_TYPE_ID_GAS); // todo Fleetio FuelType for Gas
 						request.setDate(t.getDateTime());
