@@ -33,7 +33,7 @@ public class SQLRunner {
 	private static final String DB_PASS = "4QQEKJn4uRtwtzD2";
 	private static final String INSTANCE_CONNECTION_NAME = "cariq-vehicle-data-test:us-central1:vehicle-data-db";
     
-	public static void main(String[] args) {
+public static void main(String[] args) {
 		
 		SQLRunner sqlRunner = new SQLRunner();
 		System.out.println(sqlRunner.findMaxBatchLogForFuelTxJob());
@@ -266,9 +266,7 @@ public class SQLRunner {
 	               
 	               //odometer
 	               Integer odstr = rs.getInt("odometer");
-	               //logger.info("odstr1 :" + odstr);
-	               double odometer = milesTokm(new Double(odstr));
-	               //logger.info("odometer KM :" + odometer);
+	               double odometer = metersToMiles(new Double(odstr));
 	               
 	               //location
 	               Coordinate location = new Coordinate();
@@ -324,6 +322,10 @@ public class SQLRunner {
 		
 		return list;
 	}
+
+   private static double metersToMiles(double meter) {
+	        return meter * 0.00062137119;
+	    }
 	
 	 private static double milesTokm(double distanceInMiles) {
 	        return distanceInMiles * 1.609344;
@@ -347,6 +349,7 @@ public class SQLRunner {
 			+ "  and titems.transaction_id = tx.id\n"
 			+ "  and tx.status = 'finished'\n"
 		  + "  and v.fleet_id in (?) "
+      + "  and v.vin ='1C4RJFLG2JC419001' "
 			+ "  and tx.time > ? "
 			+ "order by tx.time ASC;";
 
