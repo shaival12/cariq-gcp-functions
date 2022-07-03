@@ -149,43 +149,6 @@ public static void main(String[] args) {
 
 	}
 	
-	/**
-	 * find max insertDate from batch_job_log table
-	 * @param date
-	 * @return
-	 */
-	public  Timestamp findMaxBatchLogForFuelTxJobOld() {
-
-		try (Connection con = getConnection();
-				Statement st = con.createStatement();
-				ResultSet rs = st.executeQuery(SQL_MAX_BATCH_JOB)) {
-
-			while (rs.next()) {
-
-				try {
-					return rs.getTimestamp("last_inserted_at");
-
-				} catch (Exception e) {
-					e.printStackTrace();
-					logger.log(Level.SEVERE,
-							"Error in findMaxBatchLogForFuelTxJob while processing resultset : " + e.getMessage());
-				}
-
-			}
-
-			rs.close();
-			st.close();
-			con.close();
-
-		} catch (SQLException ex) {
-			ex.printStackTrace();
-			logger.log(Level.SEVERE,
-					"Error in findMaxBatchLogForFuelTxJob : [ " + System.currentTimeMillis() + " ]" + ex.getMessage());
-		}
-		return null;
-	}
-	
-	
 	
 	/**
 	 * find max insertDate from batch_job_log table by Hikari
@@ -279,9 +242,8 @@ public static void main(String[] args) {
 	               
 	               //volume
 	               Double volume = rs.getDouble("volume");
-	               //logger.info("volume :" + volume); //gallon to liiter
-	               volume =  gallonToLiter(volume);
-	               //logger.info("volume in lt :" + volume);
+	               logger.info("volume :" + volume); //in gallon
+	               
 	               
 	               //description
 	               String description = rs.getString("description");
@@ -290,7 +252,7 @@ public static void main(String[] args) {
 	               
 	               String fleetId = rs.getString("fleetid");
 
-                 Double unitPrice = rs.getDouble("unit_price");
+                   Double unitPrice = rs.getDouble("unit_price");
                  
 				 
 				   Transaction transaction = new Transaction(description,  driverName,  providerProductDesc,  

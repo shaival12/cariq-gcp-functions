@@ -1,5 +1,7 @@
 package gcfv2;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -123,8 +125,15 @@ public class JobProcessor {
 	}
 
 	
-	private static double literToGallon(double volumeInLiter) {
-		return volumeInLiter * 0.219969;
+	private static double gallonToLiters(double volumeInGallon) {
+		 double volumeInLiters = volumeInGallon * 3.7854118; 
+		 BigDecimal bd=new BigDecimal(volumeInLiters).setScale(2,RoundingMode.HALF_DOWN);
+		return bd.doubleValue();
+	}
+	
+	private static double covertToTwoDecimal(double volume) {
+		  BigDecimal bd=new BigDecimal(volume).setScale(2,RoundingMode.HALF_DOWN);
+		return bd.doubleValue();
 	}
 
 	private Timestamp pushDataByFleet(List<Fleet> fleetList, LocalDateTime last_inserted_at, List<Transaction> list,
@@ -158,8 +167,8 @@ public class JobProcessor {
 							//request.setVehicle_id(1958594);
 						}
 
-						request.setLiters(t.getVolume());
-						request.setUs_gallons(literToGallon(t.getVolume()));
+						request.setLiters(gallonToLiters(t.getVolume()));
+						request.setUs_gallons(covertToTwoDecimal(t.getVolume()));  // gallons
 						request.setPrice_per_volume_unit(t.getUnitPrice());
 						request.setPersonal(null);
 						request.setPartial(null);
@@ -202,6 +211,10 @@ public class JobProcessor {
 		}
 
 		return null;
+	}
+	
+	public static void main (String args[]) {
+		System.out.println(gallonToLiters(1.257));
 	}
 
 }
