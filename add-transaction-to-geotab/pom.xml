@@ -2,9 +2,9 @@
  <modelVersion>4.0.0</modelVersion>
 
  <groupId>gcfv2</groupId>
- <artifactId>cariq-gcp-function-add-transaction-to-geotab</artifactId>
+ <artifactId>add-transaction-to-geotab</artifactId>
  <version>0.0.1</version>
- <name>HTTP Function for Cloud Functions 2nd gen</name>
+ <name>HTTP Function for Cloud Functions Geotab</name>
 
  <properties>
    <maven.compiler.target>11</maven.compiler.target>
