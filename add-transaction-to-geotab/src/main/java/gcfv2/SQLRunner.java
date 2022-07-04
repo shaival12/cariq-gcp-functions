@@ -45,8 +45,8 @@ public class SQLRunner {
 
 		// Configure which instance and what database user to connect with.
 		config.setJdbcUrl(String.format("jdbc:postgresql:///%s", "cariq_prod"));
-		config.setUsername(DB_USER); // e.g. "root", "postgres"
-		config.setPassword(DB_PASS); // e.g. "my-password"
+		config.setUsername(DB_USER);  
+		config.setPassword(DB_PASS); 
 		config.setMaximumPoolSize(3);
 		config.setMinimumIdle(1);
 		config.addDataSourceProperty("socketFactory", "com.google.cloud.sql.postgres.SocketFactory");
@@ -90,8 +90,7 @@ public class SQLRunner {
 			preparedStatement.setTimestamp(4, new Timestamp(System.currentTimeMillis()));
 			preparedStatement.setString(5, log);
 			preparedStatement.setObject(6, jobId, java.sql.Types.OTHER);
-
-			System.out.println(preparedStatement);
+			
 			// Step 3: Execute the query or update query
 			result = preparedStatement.executeUpdate();
 			logger.info("insert result : [ " + result + " ]");
