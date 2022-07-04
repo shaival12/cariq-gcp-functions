@@ -28,38 +28,14 @@ public class FleetioConnector {
 
 private static final Logger logger = Logger.getLogger(FleetioConnector.class.getName());
 
-	public static void main(String args[]) {
 
-		String vin = "1C4RJFLG2JC419001"; //"vin1X1234567890" ; 
-		
-		// send data to fleetio
-		FleetioRequest request = new FleetioRequest();
-		request.setVehicle_id(1958594);
-		request.setUs_gallons(5);
-		request.setPrice_per_volume_unit(6);
-		// request.setPersonal(false);
-		request.setPartial(true);
-		request.setMeter_entry_attributes(new Meter_entry_attributes(50743));
-		request.setLiters(10);
-		request.setFuel_type_id(309829);
-		request.setDate(LocalDateTime.now());
-			
-		FleetioConnector connector = new FleetioConnector();
-		//connector.sendToFleetio(vin, request);
-		
-		Double d = 2.1927312E7;
-		System.out.print(d.intValue());
-
-	}
 
 	public void sendToFleetio(String vin, FleetioRequest request) throws Exception {
 		List<FleetioResponse> fleetioresponse = getVehiclesFromFleetio(vin);
-		logger.info("new :" + fleetioresponse.size());
+		logger.info("vin found response  :" + fleetioresponse.size());
 
-		if (fleetioresponse != null && !fleetioresponse.isEmpty()) {
-			if (request.getVehicle_id() != null) {
-				request.setVehicle_id(fleetioresponse.get(0).getId().intValue());
-			}
+		if (fleetioresponse != null && fleetioresponse.size() > 0) {
+			request.setVehicle_id(fleetioresponse.get(0).getId().intValue());
 			postFuelTranactionToFleetio(request);
 		}
 	}
@@ -71,7 +47,7 @@ private static final Logger logger = Logger.getLogger(FleetioConnector.class.get
 	 * @param vins
 	 * @return
 	 */
-	public  List<FleetioResponse> getVehiclesFromFleetio(String vins) {
+	public  List<FleetioResponse> getVehiclesFromFleetio(String vins) throws Exception{
 
 		String fleetioGetUrl = String.format(Constants.fleetioGetUrl, vins);
 		List<FleetioResponse> fleetioresponse = getVehiclesFromFleetio(fleetioGetUrl, Constants.token,
@@ -106,11 +82,9 @@ private static final Logger logger = Logger.getLogger(FleetioConnector.class.get
 	 * @param account
 	 * @return
 	 */
-	private List<FleetioResponse> getVehiclesFromFleetio(String fooResourceUrl, String token, String account) {
+	private List<FleetioResponse> getVehiclesFromFleetio(String fooResourceUrl, String token, String account) throws Exception {
 
 		List<FleetioResponse> fleetioresponse = new ArrayList<FleetioResponse>();
-
-		try {
 
 			RestTemplate restTemplate = new RestTemplate();
 			final HttpEntity<String> entity = new HttpEntity<String>(createHttpHeaders(token, account));
@@ -123,10 +97,6 @@ private static final Logger logger = Logger.getLogger(FleetioConnector.class.get
 				fleetioresponse.add(new FleetioResponse(object.getLong("id"), object.getString("vin")));
 			}
 
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-
 		return fleetioresponse;
 	}
 
@@ -138,6 +108,31 @@ private static final Logger logger = Logger.getLogger(FleetioConnector.class.get
 		headers.add("Authorization", "Token " + token);
 		headers.add("Account-token", account);
 		return headers;
+	}
+	
+	
+	public static void main(String args[]) {
+
+		String vin = "1C4RJFLG2JC419001"; //"vin1X1234567890" ; 
+		
+		// send data to fleetio
+		FleetioRequest request = new FleetioRequest();
+		request.setVehicle_id(1958594);
+		request.setUs_gallons(5);
+		request.setPrice_per_volume_unit(6);
+		// request.setPersonal(false);
+		request.setPartial(true);
+		request.setMeter_entry_attributes(new Meter_entry_attributes(50743));
+		request.setLiters(10);
+		request.setFuel_type_id(309829);
+		request.setDate(LocalDateTime.now());
+			
+		FleetioConnector connector = new FleetioConnector();
+		//connector.sendToFleetio(vin, request);
+		
+		Double d = 2.1927312E7;
+		System.out.print(d.intValue());
+
 	}
 
 	

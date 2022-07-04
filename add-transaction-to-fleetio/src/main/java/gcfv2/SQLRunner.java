@@ -28,12 +28,12 @@ public class SQLRunner {
 
 	private static final Logger logger = Logger.getLogger(SQLRunner.class.getName());
 
-	private static final Object DB_NAME = Constants.DB_NAME;
-	private static final String DB_USER = Constants.DB_USER;
-	private static final String DB_PASS = Constants.DB_PASS;
-	private static final String INSTANCE_CONNECTION_NAME = Constants.INSTANCE_CONNECTION_NAME; //prod
+	private static final Object DB_NAME = "jdbc:postgresql:///cariq_prod";
+	private static final String DB_USER = "shaival";
+	private static final String DB_PASS = "4QQEKJn4uRtwtzD2";
+	private static final String INSTANCE_CONNECTION_NAME = "cariq-vehicle-data-test:us-central1:vehicle-data-db";
     
-	public static void main(String[] args) {
+public static void main(String[] args) {
 		
 		SQLRunner sqlRunner = new SQLRunner();
 		System.out.println(sqlRunner.findMaxBatchLogForFuelTxJob());
@@ -149,43 +149,6 @@ public class SQLRunner {
 
 	}
 	
-	/**
-	 * find max insertDate from batch_job_log table
-	 * @param date
-	 * @return
-	 */
-	public  Timestamp findMaxBatchLogForFuelTxJobOld() {
-
-		try (Connection con = getConnection();
-				Statement st = con.createStatement();
-				ResultSet rs = st.executeQuery(SQL_MAX_BATCH_JOB)) {
-
-			while (rs.next()) {
-
-				try {
-					return rs.getTimestamp("last_inserted_at");
-
-				} catch (Exception e) {
-					e.printStackTrace();
-					logger.log(Level.SEVERE,
-							"Error in findMaxBatchLogForFuelTxJob while processing resultset : " + e.getMessage());
-				}
-
-			}
-
-			rs.close();
-			st.close();
-			con.close();
-
-		} catch (SQLException ex) {
-			ex.printStackTrace();
-			logger.log(Level.SEVERE,
-					"Error in findMaxBatchLogForFuelTxJob : [ " + System.currentTimeMillis() + " ]" + ex.getMessage());
-		}
-		return null;
-	}
-	
-	
 	
 	/**
 	 * find max insertDate from batch_job_log table by Hikari
@@ -266,9 +229,7 @@ public class SQLRunner {
 	               
 	               //odometer
 	               Integer odstr = rs.getInt("odometer");
-	               //logger.info("odstr1 :" + odstr);
-	               double odometer = metersToKM(new Double(odstr));
-	               //logger.info("odometer KM :" + odometer);
+	               double odometer = metersToMiles(new Double(odstr));
 	               
 	               //location
 	               Coordinate location = new Coordinate();
@@ -281,9 +242,8 @@ public class SQLRunner {
 	               
 	               //volume
 	               Double volume = rs.getDouble("volume");
-	               //logger.info("volume :" + volume); //gallon to liiter
-	               volume =  gallonToLiter(volume);
-	               //logger.info("volume in lt :" + volume);
+	               logger.info("volume :" + volume); //in gallon
+	               
 	               
 	               //description
 	               String description = rs.getString("description");
@@ -291,12 +251,15 @@ public class SQLRunner {
 	               FuelTransactionProductType productType = FuelTransactionProductType.REGULAR; //todo hardcoded
 	               
 	               String fleetId = rs.getString("fleetid");
+
+                   Double unitPrice = rs.getDouble("unit_price");
+                 
 				 
 				   Transaction transaction = new Transaction(description,  driverName,  providerProductDesc,  
 						 siteName,  vin,
 	           			 cost, currency.toUpperCase()
 	           			 ,dateTime,  location,  odometer,
-	        			 productType,  volume, fleetId);
+	        			 productType,  volume, fleetId, unitPrice);
 	               
 				   list.add(transaction);
 				   
@@ -321,11 +284,11 @@ public class SQLRunner {
 		
 		return list;
 	}
-	
-   private static double metersToKM(double distanceInMeters) {
-	        return distanceInMeters * 0.001;
-	    }
 
+   private static double metersToMiles(double meter) {
+	        return meter * 0.00062137119;
+	    }
+	
 	 private static double milesTokm(double distanceInMiles) {
 	        return distanceInMiles * 1.609344;
 	    }
@@ -339,7 +302,7 @@ public class SQLRunner {
 			+ " vs.odometer as odometer, "
 			+ " ST_X(ST_AsText(tx.location)) as long, ST_Y(ST_AsText(tx.location)) as lat , "
 			+ " tx.currency, tx.total_amount as cost,  tx.time, "
-			+ " titems.quantity as volume, titems.description as description, v.fleet_id as fleetid"
+			+ " titems.quantity as volume, titems.description as description, v.fleet_id as fleetid, titems.unit_price as unit_price"
 			+ " from transactions tx, vehicles v, users u, vehicle_states vs, stations s, transaction_items titems\n"
 			+ " where tx.vehicle_id = v.id \n"
 			+ "  and v.id = vs.vehicle_id\n"
@@ -348,11 +311,12 @@ public class SQLRunner {
 			+ "  and titems.transaction_id = tx.id\n"
 			+ "  and tx.status = 'finished'\n"
 		  + "  and v.fleet_id in (?) "
+      + "  and v.vin ='1C4RJFLG2JC419001' "
 			+ "  and tx.time > ? "
 			+ "order by tx.time ASC;";
 
 	private static final String SQL_MAX_BATCH_JOB = "select Max(last_inserted_at) as last_inserted_at from batch_job_log where "
-			+ " job_name = 'FUEL_TX_GEOTAB_JOB' and "
+			+ " job_name = 'FUEL_TX_FLEETIO_JOB' and "
 			+ " status = 'success';";
 
 	
