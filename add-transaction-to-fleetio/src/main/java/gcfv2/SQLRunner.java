@@ -28,12 +28,12 @@ public class SQLRunner {
 
 	private static final Logger logger = Logger.getLogger(SQLRunner.class.getName());
 
-	private static final Object DB_NAME = "jdbc:postgresql:///cariq_prod";
-	private static final String DB_USER = "shaival";
-	private static final String DB_PASS = "4QQEKJn4uRtwtzD2";
-	private static final String INSTANCE_CONNECTION_NAME = "cariq-vehicle-data-test:us-central1:vehicle-data-db";
+	private static final Object DB_NAME = Constants.DB_NAME;
+	private static final String DB_USER = Constants.DB_USER;
+	private static final String DB_PASS = Constants.DB_PASS;
+	private static final String INSTANCE_CONNECTION_NAME = Constants.INSTANCE_CONNECTION_NAME; 
     
-public static void main(String[] args) {
+	public static void main(String[] args) {
 		
 		SQLRunner sqlRunner = new SQLRunner();
 		System.out.println(sqlRunner.findMaxBatchLogForFuelTxJob());
@@ -237,7 +237,7 @@ public static void main(String[] args) {
 	       		   location.setY(rs.getDouble("lat"));
 	               
 	               String currency = rs.getString("currency");
-	               Timestamp time = rs.getTimestamp("time");
+	               Timestamp time = rs.getTimestamp("inserted_at"); //time
 	               LocalDateTime dateTime = time.toLocalDateTime();
 	               
 	               //volume
@@ -301,7 +301,7 @@ public static void main(String[] args) {
 	private static final String SQL_FETCH_FUEL_TX = "select u.full_name as driverName,  s.name as siteName, v.vin, "
 			+ " vs.odometer as odometer, "
 			+ " ST_X(ST_AsText(tx.location)) as long, ST_Y(ST_AsText(tx.location)) as lat , "
-			+ " tx.currency, tx.total_amount as cost,  tx.time, "
+			+ " tx.currency, tx.total_amount as cost,  tx.time, tx.inserted_at,"
 			+ " titems.quantity as volume, titems.description as description, v.fleet_id as fleetid, titems.unit_price as unit_price"
 			+ " from transactions tx, vehicles v, users u, vehicle_states vs, stations s, transaction_items titems\n"
 			+ " where tx.vehicle_id = v.id \n"
@@ -327,4 +327,6 @@ public static void main(String[] args) {
 	 private static final String UPDATE_BATCH_JOB_SQL_STATUS = "UPDATE  batch_job_log SET " +
 		        "  status = ?, updated_at = ?, last_inserted_at = ? WHERE job_id = ? ;" ;
 }
+
+
 
