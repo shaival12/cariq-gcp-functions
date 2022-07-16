@@ -12,11 +12,13 @@ import org.json.JSONObject;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestTemplate;
 
 import gcfv2.Constants;
+import gcfv2.Transaction;
 
 /**
  * Client to connect with Fleetio Apis
@@ -26,9 +28,7 @@ import gcfv2.Constants;
  */
 public class FleetioConnector {
 
-private static final Logger logger = Logger.getLogger(FleetioConnector.class.getName());
-
-
+	private static final Logger logger = Logger.getLogger(FleetioConnector.class.getName());
 
 	public void sendToFleetio(String vin, FleetioRequest request) throws Exception {
 		List<FleetioResponse> fleetioresponse = getVehiclesFromFleetio(vin);
@@ -47,7 +47,7 @@ private static final Logger logger = Logger.getLogger(FleetioConnector.class.get
 	 * @param vins
 	 * @return
 	 */
-	public  List<FleetioResponse> getVehiclesFromFleetio(String vins) throws Exception{
+	public List<FleetioResponse> getVehiclesFromFleetio(String vins) throws Exception {
 
 		String fleetioGetUrl = String.format(Constants.fleetioGetUrl, vins);
 		List<FleetioResponse> fleetioresponse = getVehiclesFromFleetio(fleetioGetUrl, Constants.token,
@@ -55,20 +55,19 @@ private static final Logger logger = Logger.getLogger(FleetioConnector.class.get
 		return fleetioresponse;
 	}
 
-	
-	public  void postFuelTranactionToFleetio(FleetioRequest request) throws Exception {
+	public void postFuelTranactionToFleetio(FleetioRequest request) throws Exception {
 
-		
-		String requestJsonTemp = "{ \"vehicle_id\": "+request.getVehicle_id()+", \"date\": \" "+request.getDate()+"\",\n"
-				+ "	 \"fuel_type_id\": "+request.getFuel_type_id()+", \"liters\": "+request.getLiters()+", \"partial\": "+request.isPartial()+", \"personal\": "+request.isPersonal()+",\n"
-				+ "	 \"price_per_volume_unit\": "+request.getPrice_per_volume_unit()+", \"us_gallons\": "+request.getUs_gallons()+",  \"reference\": \""+" Car IQ " 
-			    + " \", \"meter_entry_attributes\": {\n"
-				+ "	 \"value\": "+request.getMeter_entry_attributes().getValue()+" } \n"
-				+ "     }";
-		
+		String requestJsonTemp = "{ \"vehicle_id\": " + request.getVehicle_id() + ", \"date\": \" " + request.getDate()
+				+ "\",\n" + "	 \"fuel_type_id\": " + request.getFuel_type_id() + ", \"liters\": "
+				+ request.getLiters() + ", \"partial\": " + request.isPartial() + ", \"personal\": "
+				+ request.isPersonal() + ",\n" + "	 \"price_per_volume_unit\": " + request.getPrice_per_volume_unit()
+				+ ", \"us_gallons\": " + request.getUs_gallons() + ",  \"reference\": \"" + " Car IQ "
+				+ " \", \"meter_entry_attributes\": {\n" + "	 \"value\": "
+				+ request.getMeter_entry_attributes().getValue() + " } \n" + "     }";
+
 		RestTemplate restTemplate = new RestTemplate();
-		//final HttpEntity<FleetioRequest> entity = new HttpEntity<FleetioRequest>(request, createHttpHeaders(Constants.token, Constants.account));
-		final HttpEntity<String> entity = new HttpEntity<String>(requestJsonTemp, createHttpHeaders(Constants.token, Constants.account));
+		final HttpEntity<String> entity = new HttpEntity<String>(requestJsonTemp,
+				createHttpHeaders(Constants.token, Constants.account));
 		logger.info(entity.getBody().toString());
 		ResponseEntity<String> response = restTemplate.postForEntity(Constants.fleetioPostUrl, entity, String.class);
 		logger.info("status code from Fleetio :" + response.getStatusCodeValue());
@@ -82,22 +81,80 @@ private static final Logger logger = Logger.getLogger(FleetioConnector.class.get
 	 * @param account
 	 * @return
 	 */
-	private List<FleetioResponse> getVehiclesFromFleetio(String fooResourceUrl, String token, String account) throws Exception {
+	private List<FleetioResponse> getVehiclesFromFleetio(String fooResourceUrl, String token, String account)
+			throws Exception {
 
 		List<FleetioResponse> fleetioresponse = new ArrayList<FleetioResponse>();
 
-			RestTemplate restTemplate = new RestTemplate();
-			final HttpEntity<String> entity = new HttpEntity<String>(createHttpHeaders(token, account));
-			ResponseEntity<String> response = restTemplate.exchange(fooResourceUrl + "", HttpMethod.GET, entity,
-					String.class);
-			
-			JSONArray array = new JSONArray(response.getBody());
-			for (int i = 0; i < array.length(); i++) {
-				JSONObject object = array.getJSONObject(i);
-				fleetioresponse.add(new FleetioResponse(object.getLong("id"), object.getString("vin")));
-			}
+		RestTemplate restTemplate = new RestTemplate();
+		final HttpEntity<String> entity = new HttpEntity<String>(createHttpHeaders(token, account));
+		ResponseEntity<String> response = restTemplate.exchange(fooResourceUrl + "", HttpMethod.GET, entity,
+				String.class);
+
+		JSONArray array = new JSONArray(response.getBody());
+		for (int i = 0; i < array.length(); i++) {
+			JSONObject object = array.getJSONObject(i);
+			fleetioresponse.add(new FleetioResponse(object.getLong("id"), object.getString("vin")));
+		}
 
 		return fleetioresponse;
+	}
+
+	/**
+	 * get vendors from Fleetio
+	 * 
+	 * @param fooResourceUrl
+	 * @param token
+	 * @param account
+	 * @return
+	 */
+	public Long getVendor(Transaction transaction) throws Exception {
+		String vendorName = transaction.getStationBrand() + " #" + transaction.getStationNumber(); // as per Fleetio
+																									// standard
+		logger.info("getVendor for name :" + vendorName);
+
+		RestTemplate restTemplate = new RestTemplate();
+		final HttpEntity<String> entity = new HttpEntity<String>(createHttpHeaders(Constants.token, Constants.account));
+		String url = String.format(Constants.fleetioGetVendorsUrl, vendorName);
+		ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, entity, String.class);
+
+		Long vendorId = null;
+		if (response.getStatusCode() == HttpStatus.OK) {
+
+			JSONArray array = new JSONArray(response.getBody());
+			if (array.length() > 0) { // if vendor exists
+				for (int i = 0; i < array.length(); i++) {
+					JSONObject object = array.getJSONObject(i);
+					vendorId = object.getLong("id");
+				}
+
+			} else { // create new Vendor if not found
+
+				vendorId = postNewVendorToFleetio(vendorName, transaction);
+			}
+
+		}
+		logger.info("vendorId :" + vendorId);
+		return vendorId;
+	}
+
+	/**
+	 * create new Vendor on Fleetio
+	 */
+	public Long postNewVendorToFleetio(String vendorName, Transaction transaction) throws Exception {
+
+		String requestJsonTemp = "{ \"name\": " + vendorName + ", \n" + "	 \"city\": " + transaction.getStationCity()
+				+ ", \"country\": " + transaction.getStationCountry() + ", \"fuel\": true," + " \"street_address\": "
+				+ transaction.getStationLine1() + ",\n" + "	 \"postal_code\": " + transaction.getStationZip() + " }";
+
+		RestTemplate restTemplate = new RestTemplate();
+		final HttpEntity<String> entity = new HttpEntity<String>(requestJsonTemp,
+				createHttpHeaders(Constants.token, Constants.account));
+		logger.info(entity.getBody().toString());
+		ResponseEntity<Vendor> response = restTemplate.postForEntity(Constants.fleetioPostVendorsUrl, entity,
+				Vendor.class);
+		logger.info("status code from Fleetio for Vendor creation :" + response.getStatusCodeValue());
+		return response.getBody().getId();
 	}
 
 	private static HttpHeaders createHttpHeaders(String token, String account) {
@@ -109,31 +166,14 @@ private static final Logger logger = Logger.getLogger(FleetioConnector.class.get
 		headers.add("Account-token", account);
 		return headers;
 	}
-	
-	
-	public static void main(String args[]) {
 
-		String vin = "1C4RJFLG2JC419001"; //"vin1X1234567890" ; 
-		
-		// send data to fleetio
-		FleetioRequest request = new FleetioRequest();
-		request.setVehicle_id(1958594);
-		request.setUs_gallons(5);
-		request.setPrice_per_volume_unit(6);
-		// request.setPersonal(false);
-		request.setPartial(true);
-		request.setMeter_entry_attributes(new Meter_entry_attributes(50743));
-		request.setLiters(10);
-		request.setFuel_type_id(309829);
-		request.setDate(LocalDateTime.now());
-			
+	public static void main(String args[]) throws Exception {
+
 		FleetioConnector connector = new FleetioConnector();
-		//connector.sendToFleetio(vin, request);
-		
-		Double d = 2.1927312E7;
-		System.out.print(d.intValue());
+		// Long vendorId = connector.getVendor("Shell #1112", Constants.token,
+		// Constants.account);
+		// System.out.print(vendorId);
 
 	}
 
-	
 }

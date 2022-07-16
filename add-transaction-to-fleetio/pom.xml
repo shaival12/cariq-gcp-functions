@@ -1,48 +1,63 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
-	<modelVersion>4.0.0</modelVersion>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+ <modelVersion>4.0.0</modelVersion>
 
-	<groupId>gcfv2</groupId>
-	<artifactId>cariq-gcp-function-add-transaction-to-geotab</artifactId>
-	<version>0.0.1</version>
-	<name>HTTP Function to push fuel data from cariq to Geotab</name>
-	<properties>
-		<maven.compiler.target>11</maven.compiler.target>
-		<maven.compiler.source>11</maven.compiler.source>
-	</properties>
+ <groupId>gcfv2</groupId>
+ <artifactId>cariq-gcp-function-add-transaction-to-fleetio</artifactId>
+ <version>0.0.1</version>
+ <name>HTTP Function for Cloud Functions 2nd gen</name>
+ <parent>
+		<groupId>org.springframework.boot</groupId>
+		<artifactId>spring-boot-starter-parent</artifactId>
+		<version>2.6.7</version>
+		<relativePath /> <!-- lookup parent from repository -->
+	</parent>
+ <properties>
+   <maven.compiler.target>11</maven.compiler.target>
+   <maven.compiler.source>11</maven.compiler.source>
+ </properties>
 
-	<dependencies>
-		<dependency>
-			<groupId>com.google.cloud.functions</groupId>
-			<artifactId>functions-framework-api</artifactId>
-			<version>1.0.4</version>
+ <dependencies>
+   <dependency>
+     <groupId>com.google.cloud.functions</groupId>
+     <artifactId>functions-framework-api</artifactId>
+     <version>1.0.4</version>
+   </dependency>
+   <dependency>
+    <groupId>com.geotab</groupId>
+    <artifactId>java-sdk</artifactId>
+    <version>6.0.1</version>
+</dependency>
+<dependency>
+    <groupId>org.postgresql</groupId>
+    <artifactId>postgresql</artifactId>
+    <version>42.2.16</version>
+</dependency> 
+<dependency>
+	    <groupId>com.zaxxer</groupId>
+	    <artifactId>HikariCP</artifactId>
+	    <version>3.4.5</version>
+	</dependency>
+<dependency>
+    <groupId>com.google.cloud.sql</groupId>
+    <artifactId>postgres-socket-factory</artifactId>
+    <version>1.0.15</version>
+</dependency>
+<dependency>
+      <groupId>com.google.cloud</groupId>
+      <artifactId>google-cloud-secretmanager</artifactId>
+      <version>2.1.2</version>
+    </dependency>
+
+    <dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-web</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>com.geotab</groupId>
-			<artifactId>java-sdk</artifactId>
-			<version>6.0.1</version>
+		    <groupId>org.json</groupId>
+		    <artifactId>json</artifactId>
+		    <version>20220320</version>
 		</dependency>
-		<dependency>
-			<groupId>org.postgresql</groupId>
-			<artifactId>postgresql</artifactId>
-			<version>42.2.16</version>
-		</dependency>
-		<dependency>
-			<groupId>com.zaxxer</groupId>
-			<artifactId>HikariCP</artifactId>
-			<version>3.4.5</version>
-		</dependency>
-		<dependency>
-			<groupId>com.google.cloud.sql</groupId>
-			<artifactId>postgres-socket-factory</artifactId>
-			<version>1.0.15</version>
-		</dependency>
-		<dependency>
-			<groupId>com.google.cloud</groupId>
-			<artifactId>google-cloud-secretmanager</artifactId>
-			<version>2.1.2</version>
-		</dependency>
-	</dependencies>
+
+ </dependencies>
 
 </project>

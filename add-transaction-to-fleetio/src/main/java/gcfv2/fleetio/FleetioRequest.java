@@ -23,6 +23,7 @@ public class FleetioRequest {
 	double us_gallons;
 	Meter_entry_attributes meter_entry_attributes;
 	String stationName;
+	Integer vendor_id;
 
 	public Integer getVehicle_id() {
 		return vehicle_id;
@@ -104,13 +105,23 @@ public class FleetioRequest {
 	public void setStationName(String stationName) {
 		this.stationName = stationName;
 	}
+	
+	public Integer getVendor_id() {
+		return vendor_id;
+	}
+
+	public void setVendor_id(Integer vendor_id) {
+		this.vendor_id = vendor_id;
+	}
 
 	@Override
 	public String toString() {
 		return "FleetioRequest [vehicle_id=" + vehicle_id + ", date=" + date + ", fuel_type_id=" + fuel_type_id
 				+ ", liters=" + liters + ", partial=" + partial + ", personal=" + personal + ", price_per_volume_unit="
-				+ price_per_volume_unit + ", us_gallons=" + us_gallons + ", meter_entry_attributes=" + meter_entry_attributes + "]";
+				+ price_per_volume_unit + ", us_gallons=" + us_gallons + ", meter_entry_attributes="
+				+ meter_entry_attributes + ", stationName=" + stationName + ", vendor_id=" + vendor_id + "]";
 	}
+
 
 	
 }

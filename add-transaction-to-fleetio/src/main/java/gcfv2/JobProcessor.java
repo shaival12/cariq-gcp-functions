@@ -1,7 +1,5 @@
 package gcfv2;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -126,14 +124,7 @@ public class JobProcessor {
 
 	
 	private static double gallonToLiters(double volumeInGallon) {
-		 double volumeInLiters = volumeInGallon * 3.7854118; 
-		 BigDecimal bd=new BigDecimal(volumeInLiters).setScale(2,RoundingMode.HALF_DOWN);
-		return bd.doubleValue();
-	}
-	
-	private static double covertToTwoDecimal(double volume) {
-		  BigDecimal bd=new BigDecimal(volume).setScale(2,RoundingMode.HALF_DOWN);
-		return bd.doubleValue();
+		return volumeInGallon * 3.7854118;
 	}
 
 	private Timestamp pushDataByFleet(List<Fleet> fleetList, LocalDateTime last_inserted_at, List<Transaction> list,
@@ -154,7 +145,9 @@ public class JobProcessor {
 
 				if (fleet != null) {
 					try {
-
+						FleetioConnector fleetioConnector = new FleetioConnector();
+						Long vendorId = fleetioConnector.getVendor(t);
+					
 						logger.info(counter++ + ") before calling api for  : " + t.getVin() + " -- " + t.getDateTime());
 
 						String vin = t.getVin();
@@ -168,17 +161,17 @@ public class JobProcessor {
 						}
 
 						request.setLiters(gallonToLiters(t.getVolume()));
-						request.setUs_gallons(covertToTwoDecimal(t.getVolume()));  // gallons
+						request.setUs_gallons(t.getVolume());  // gallons
 						request.setPrice_per_volume_unit(t.getUnitPrice());
 						request.setPersonal(null);
 						request.setPartial(null);
-						request.setStationName(t.getSiteName());
+						request.setStationName(t.getStationName());
 						request.setMeter_entry_attributes(new Meter_entry_attributes(odometer));
 						request.setFuel_type_id(Constants.FLEETIO_FULE_TYPE_ID_GAS); // todo Fleetio FuelType for Gas
 						request.setDate(t.getDateTime());
+						request.setVendor_id(vendorId != null ? vendorId.intValue() : null); //set vendor id
 
 						// call connector and send Fuel Tx to Fleetio
-						FleetioConnector fleetioConnector = new FleetioConnector();
 						fleetioConnector.sendToFleetio(vin, request);
 						logger.info("done sendToFleetio  for vin: " + vin);
 
@@ -211,10 +204,6 @@ public class JobProcessor {
 		}
 
 		return null;
-	}
-	
-	public static void main (String args[]) {
-		System.out.println(gallonToLiters(1.257));
 	}
 
 }

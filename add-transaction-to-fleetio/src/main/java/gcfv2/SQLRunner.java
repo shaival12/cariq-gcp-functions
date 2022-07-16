@@ -31,7 +31,7 @@ public class SQLRunner {
 	private static final Object DB_NAME = Constants.DB_NAME;
 	private static final String DB_USER = Constants.DB_USER;
 	private static final String DB_PASS = Constants.DB_PASS;
-	private static final String INSTANCE_CONNECTION_NAME = Constants.INSTANCE_CONNECTION_NAME; 
+	private static final String INSTANCE_CONNECTION_NAME = Constants.INSTANCE_CONNECTION_NAME; //prod
     
 	public static void main(String[] args) {
 		
@@ -223,7 +223,19 @@ public class SQLRunner {
 
 	            try {	
 	               String driverName = rs.getString("driverName");
-	               String siteName = rs.getString("siteName");
+	               
+	               //station information
+	               String stationName = rs.getString("station_name");
+	               String stationBrand = rs.getString("station_brand");
+	               String stationNumber = rs.getString("station_number");
+	               String stationLine1 = rs.getString("station_line1");
+	               String stationZip = rs.getString("station_zip");
+	               String stationCity = rs.getString("station_city");
+	               String stationState = rs.getString("station_state");
+	               String stationCountry = rs.getString("station_country");
+	               
+	               
+	               //vehicle info
 	               String vin = rs.getString("vin");
 	               BigDecimal cost = new BigDecimal(rs.getString("cost"));
 	               
@@ -237,7 +249,7 @@ public class SQLRunner {
 	       		   location.setY(rs.getDouble("lat"));
 	               
 	               String currency = rs.getString("currency");
-	               Timestamp time = rs.getTimestamp("inserted_at"); //time
+	               Timestamp time = rs.getTimestamp("local_time"); //time
 	               LocalDateTime dateTime = time.toLocalDateTime();
 	               
 	               //volume
@@ -256,7 +268,15 @@ public class SQLRunner {
                  
 				 
 				   Transaction transaction = new Transaction(description,  driverName,  providerProductDesc,  
-						 siteName,  vin,
+						   stationName, 
+						   stationBrand, 
+						   stationNumber, 
+						   stationLine1, 
+						   stationZip, 
+						   stationCity, 
+						   stationState, 
+						   stationCountry, 
+						   vin,
 	           			 cost, currency.toUpperCase()
 	           			 ,dateTime,  location,  odometer,
 	        			 productType,  volume, fleetId, unitPrice);
@@ -298,10 +318,19 @@ public class SQLRunner {
 	 }
 	 
    //+ "  and v.vin ='4S4BSANC8F3327518' "
-	private static final String SQL_FETCH_FUEL_TX = "select u.full_name as driverName,  s.name as siteName, v.vin, "
+	private static final String SQL_FETCH_FUEL_TX = "select u.full_name as driverName,  "
+			+ " s.name as station_name, "
+			+ " s.brand as station_brand,  "
+			+ " s.data->>'storeNumber' as station_number, "
+			+ " s.address->>'line1' as station_line1, "
+			+ " s.address->>'zip' as station_zip, "
+			+ " s.address->>'city' as station_city, "
+			+ " s.address->>'state' as station_state, "
+			+ " s.address->>'country' as station_country, "
+			+ " v.vin, "
 			+ " vs.odometer as odometer, "
 			+ " ST_X(ST_AsText(tx.location)) as long, ST_Y(ST_AsText(tx.location)) as lat , "
-			+ " tx.currency, tx.total_amount as cost,  tx.time, tx.inserted_at,"
+			+ " tx.currency, tx.total_amount as cost,  tx.time, tx.local_time,"
 			+ " titems.quantity as volume, titems.description as description, v.fleet_id as fleetid, titems.unit_price as unit_price"
 			+ " from transactions tx, vehicles v, users u, vehicle_states vs, stations s, transaction_items titems\n"
 			+ " where tx.vehicle_id = v.id \n"
@@ -310,8 +339,8 @@ public class SQLRunner {
 			+ "  and tx.station_id = s.id\n"
 			+ "  and titems.transaction_id = tx.id\n"
 			+ "  and tx.status = 'finished'\n"
-		  + "  and v.fleet_id in (?) "
-      + "  and v.vin ='1C4RJFLG2JC419001' "
+		    + "  and v.fleet_id in (?) "
+            + "  and v.vin ='1C4RJFLG2JC419001' "
 			+ "  and tx.time > ? "
 			+ "order by tx.time ASC;";
 
@@ -327,6 +356,7 @@ public class SQLRunner {
 	 private static final String UPDATE_BATCH_JOB_SQL_STATUS = "UPDATE  batch_job_log SET " +
 		        "  status = ?, updated_at = ?, last_inserted_at = ? WHERE job_id = ? ;" ;
 }
+
 
 
 
