@@ -4,6 +4,16 @@ public class Vendor {
 
 	Long id;
 	String name;
+	
+	public Vendor() {
+		super();
+	}
+
+	public Vendor(Long id, String name) {
+		super();
+		this.id = id;
+		this.name = name;
+	}
 
 	public Long getId() {
 		return id;

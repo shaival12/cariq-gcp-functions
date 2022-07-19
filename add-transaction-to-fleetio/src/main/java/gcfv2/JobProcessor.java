@@ -47,12 +47,12 @@ public class JobProcessor {
 
 				if (fleetList != null && fleetList.size() > 0) {
 					fleetIds = fleetList.stream().map(e -> "'" + e.getFleetid() + "'").collect(Collectors.toList());
-					System.out.println("fleetIds size from secrets :" + fleetIds.size());
+					logger.info("fleetIds size from secrets :" + fleetIds.size());
 				}
 
 			} catch (Exception ep) {
 				ep.printStackTrace();
-				System.out.println("Error while getting secrets :" + ep);
+				logger.log(Level.SEVERE,"Error while getting secrets :" + ep);
 			}
 
 			// find last_inserted_dt from batch_job_log table
@@ -154,6 +154,7 @@ public class JobProcessor {
 					
 						FleetioRequest request = new FleetioRequest();
 						double odometer = t.getOdometer();
+                        //odometer =  51846 ;
 						if (Constants.FLEETIO_TEST) {
 							vin = Constants.FLEETIO_TEST_VIN; //"1C4RJFLG2JC419001";
 							 odometer = Constants.FLEETIO_TEST_ODOMETER;

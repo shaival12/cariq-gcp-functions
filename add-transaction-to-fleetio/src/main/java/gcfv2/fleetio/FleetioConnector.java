@@ -1,18 +1,17 @@
 package gcfv2.fleetio;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
-
-import java.util.logging.Level;
+import java.util.Optional;
 import java.util.logging.Logger;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestTemplate;
@@ -57,13 +56,13 @@ public class FleetioConnector {
 
 	public void postFuelTranactionToFleetio(FleetioRequest request) throws Exception {
 
-		String requestJsonTemp = "{ \"vehicle_id\": " + request.getVehicle_id() + ", \"date\": \" " + request.getDate()
-				+ "\",\n" + "	 \"fuel_type_id\": " + request.getFuel_type_id() + ", \"liters\": "
-				+ request.getLiters() + ", \"partial\": " + request.isPartial() + ", \"personal\": "
-				+ request.isPersonal() + ",\n" + "	 \"price_per_volume_unit\": " + request.getPrice_per_volume_unit()
-				+ ", \"us_gallons\": " + request.getUs_gallons() + ",  \"reference\": \"" + " Car IQ "
-				+ " \", \"meter_entry_attributes\": {\n" + "	 \"value\": "
-				+ request.getMeter_entry_attributes().getValue() + " } \n" + "     }";
+		String requestJsonTemp = "{ \"vendor_id\": " + request.getVendor_id() + ",\"vehicle_id\": "
+				+ request.getVehicle_id() + ", \"date\": \" " + request.getDate() + "\",\n" + "	 \"fuel_type_id\": "
+				+ request.getFuel_type_id() + ", \"liters\": " + request.getLiters() + ", \"partial\": "
+				+ request.isPartial() + ", \"personal\": " + request.isPersonal() + ",\n"
+				+ "	 \"price_per_volume_unit\": " + request.getPrice_per_volume_unit() + ", \"us_gallons\": "
+				+ request.getUs_gallons() + ",  \"reference\": \"" + " Car IQ " + " \", \"meter_entry_attributes\": {\n"
+				+ "	 \"value\": " + request.getMeter_entry_attributes().getValue() + " } \n" + "     }";
 
 		RestTemplate restTemplate = new RestTemplate();
 		final HttpEntity<String> entity = new HttpEntity<String>(requestJsonTemp,
@@ -109,31 +108,30 @@ public class FleetioConnector {
 	 * @return
 	 */
 	public Long getVendor(Transaction transaction) throws Exception {
-		String vendorName = transaction.getStationBrand() + " #" + transaction.getStationNumber(); // as per Fleetio
-																									// standard
+		String stationNumber = transaction.getStationNumber();
+		stationNumber = stationNumber.length() > 4 ? stationNumber.substring(stationNumber.length() - 4)
+				: stationNumber;
+		String vendorName = transaction.getStationBrand() + " #" + stationNumber; // as per Fleetio
+
 		logger.info("getVendor for name :" + vendorName);
-
-		RestTemplate restTemplate = new RestTemplate();
-		final HttpEntity<String> entity = new HttpEntity<String>(createHttpHeaders(Constants.token, Constants.account));
-		String url = String.format(Constants.fleetioGetVendorsUrl, vendorName);
-		ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, entity, String.class);
-
+		List<Vendor> list = getVendorList();
+		logger.info("Vendor list: " + list.size());
 		Long vendorId = null;
-		if (response.getStatusCode() == HttpStatus.OK) {
+		if (list.size()>0) {
+			// check if vendor already exists
+			Optional<Vendor> vendor = list.stream().filter(e -> e.getName().equalsIgnoreCase(vendorName)).findFirst();
 
-			JSONArray array = new JSONArray(response.getBody());
-			if (array.length() > 0) { // if vendor exists
-				for (int i = 0; i < array.length(); i++) {
-					JSONObject object = array.getJSONObject(i);
-					vendorId = object.getLong("id");
-				}
-
-			} else { // create new Vendor if not found
-
-				vendorId = postNewVendorToFleetio(vendorName, transaction);
+			if (vendor.isPresent()) {
+				logger.info("vendor id : " + vendor.get().getId()); // 2
+				vendorId = vendor.get().getId();
 			}
 
+		} else { // create new Vendor if not found
+			logger.info("new vendor will be created : " + vendorId);
+			vendorId = postNewVendorToFleetio(vendorName, transaction);
+			logger.info("After new vendor will be created : " + vendorId);
 		}
+
 		logger.info("vendorId :" + vendorId);
 		return vendorId;
 	}
@@ -143,9 +141,10 @@ public class FleetioConnector {
 	 */
 	public Long postNewVendorToFleetio(String vendorName, Transaction transaction) throws Exception {
 
-		String requestJsonTemp = "{ \"name\": " + vendorName + ", \n" + "	 \"city\": " + transaction.getStationCity()
-				+ ", \"country\": " + transaction.getStationCountry() + ", \"fuel\": true," + " \"street_address\": "
-				+ transaction.getStationLine1() + ",\n" + "	 \"postal_code\": " + transaction.getStationZip() + " }";
+		String requestJsonTemp = "{ \"name\": \"" + vendorName + "\", \n" + "	 \"city\": \""
+				+ transaction.getStationCity() + "\", \"country\": \"" + transaction.getStationCountry()
+				+ "\", \"fuel\": true," + " \"street_address\": \"" + transaction.getStationLine1() + "\",\n"
+				+ "	 \"postal_code\": \"" + transaction.getStationZip() + "\" }";
 
 		RestTemplate restTemplate = new RestTemplate();
 		final HttpEntity<String> entity = new HttpEntity<String>(requestJsonTemp,
@@ -169,11 +168,34 @@ public class FleetioConnector {
 
 	public static void main(String args[]) throws Exception {
 
-		FleetioConnector connector = new FleetioConnector();
-		// Long vendorId = connector.getVendor("Shell #1112", Constants.token,
-		// Constants.account);
-		// System.out.print(vendorId);
+		// FleetioConnector connector = new FleetioConnector();
+		List<Vendor> list = new ArrayList<Vendor>();
+		list.add(new Vendor(11l, "Shell #9195"));
+		list.add(new Vendor(12l, "Shell #9193"));
+		String name = "Shell #9195";
 
+		Optional<Vendor> vendor = list.stream().filter(e -> e.getName().equalsIgnoreCase(name)).findFirst();
+
+		if (vendor.isPresent()) {
+			System.out.println(vendor.get().getId()); // 2
+		} else {
+			System.out.println("no value?");
+		}
+
+		// String url = "Shell #9091";
+		// System.out.print(UriUtils.encode(url, StandardCharsets.UTF_8));
+
+	}
+
+	public List<Vendor> getVendorList() {
+		RestTemplate restTemplate = new RestTemplate();
+		final HttpEntity<String> entity = new HttpEntity<String>(createHttpHeaders(Constants.token, Constants.account));
+		logger.info("get vendor url :" + Constants.fleetioPostVendorsUrl);
+		ResponseEntity<List<Vendor>> response = restTemplate.exchange(Constants.fleetioPostVendorsUrl, HttpMethod.GET,
+				entity, new ParameterizedTypeReference<List<Vendor>>() {
+				});
+		
+		return response.getBody();
 	}
 
 }
