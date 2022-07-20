@@ -125,8 +125,10 @@ public class FleetioConnector {
 				logger.info("vendor id : " + vendor.get().getId()); // 2
 				vendorId = vendor.get().getId();
 			}
-
-		} else { // create new Vendor if not found
+		} 
+    
+    // no existing vendor
+    if(vendorId == null) { // create new Vendor if not found
 			logger.info("new vendor will be created : " + vendorId);
 			vendorId = postNewVendorToFleetio(vendorName, transaction);
 			logger.info("After new vendor will be created : " + vendorId);

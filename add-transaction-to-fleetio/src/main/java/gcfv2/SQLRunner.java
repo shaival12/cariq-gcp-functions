@@ -33,7 +33,7 @@ public class SQLRunner {
 	private static final String DB_PASS = Constants.DB_PASS;
 	private static final String INSTANCE_CONNECTION_NAME = Constants.INSTANCE_CONNECTION_NAME; //prod
     
-	public static void main(String[] args) {
+public static void main(String[] args) {
 		
 		SQLRunner sqlRunner = new SQLRunner();
 		System.out.println(sqlRunner.findMaxBatchLogForFuelTxJob());
@@ -291,7 +291,7 @@ public class SQLRunner {
 	            }
             
             }
-            System.out.println( "list = " +  list.size());
+            logger.info( "sqlrunner list = " +  list.size());
             
             rs.close();
             st.close();
@@ -341,8 +341,8 @@ public class SQLRunner {
 			+ "  and tx.status = 'finished'\n"
 		    + "  and v.fleet_id in (?) "
             + "  and v.vin ='1C4RJFLG2JC419001' "
-			+ "  and tx.time > ? "
-			+ "order by tx.time ASC;";
+			+ "  and tx.local_time > ? "
+			+ "order by tx.local_time ASC;";
 
 	private static final String SQL_MAX_BATCH_JOB = "select Max(last_inserted_at) as last_inserted_at from batch_job_log where "
 			+ " job_name = 'FUEL_TX_FLEETIO_JOB' and "
@@ -356,6 +356,8 @@ public class SQLRunner {
 	 private static final String UPDATE_BATCH_JOB_SQL_STATUS = "UPDATE  batch_job_log SET " +
 		        "  status = ?, updated_at = ?, last_inserted_at = ? WHERE job_id = ? ;" ;
 }
+
+
 
 
 
