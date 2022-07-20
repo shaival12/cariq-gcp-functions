@@ -1,5 +1,7 @@
 package gcfv2;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -154,19 +156,20 @@ public class JobProcessor {
 					
 						FleetioRequest request = new FleetioRequest();
 						double odometer = t.getOdometer();
-                        //odometer =  51846 ;
+                       //odometer =  51880;
 						if (Constants.FLEETIO_TEST) {
 							vin = Constants.FLEETIO_TEST_VIN; //"1C4RJFLG2JC419001";
 							 odometer = Constants.FLEETIO_TEST_ODOMETER;
 							//request.setVehicle_id(1958594);
 						}
 
-						request.setLiters(gallonToLiters(t.getVolume()));
+						request.setLiters(covertToTwoDecimal(t.getVolume()));
 						request.setUs_gallons(t.getVolume());  // gallons
 						request.setPrice_per_volume_unit(t.getUnitPrice());
 						request.setPersonal(null);
 						request.setPartial(null);
 						request.setStationName(t.getStationName());
+						logger.info("odometer : " + odometer);
 						request.setMeter_entry_attributes(new Meter_entry_attributes(odometer));
 						request.setFuel_type_id(Constants.FLEETIO_FULE_TYPE_ID_GAS); // todo Fleetio FuelType for Gas
 						request.setDate(t.getDateTime());
@@ -206,5 +209,12 @@ public class JobProcessor {
 
 		return null;
 	}
+	
+	
+	private static double covertToTwoDecimal(double volume) {
+		  BigDecimal bd=new BigDecimal(volume).setScale(2,RoundingMode.HALF_DOWN);
+	      return bd.doubleValue();
+	}
+		
 
 }
