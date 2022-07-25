@@ -108,7 +108,12 @@ public class FleetioConnector {
 	 * @return
 	 */
 	public Long getVendor(Transaction transaction) throws Exception {
+		logger.info("getVendor for  :" + transaction.getDriverName());
+		
 		String stationNumber = transaction.getStationNumber();
+		if(stationNumber == null) {
+			stationNumber = "9999" ;
+		}
 		stationNumber = stationNumber.length() > 4 ? stationNumber.substring(stationNumber.length() - 4)
 				: stationNumber;
 		String vendorName = transaction.getStationBrand() + " #" + stationNumber; // as per Fleetio
