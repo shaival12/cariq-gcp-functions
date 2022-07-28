@@ -30,14 +30,21 @@ public class FleetioConnector {
 	private static final Logger logger = Logger.getLogger(FleetioConnector.class.getName());
 
 	public void sendToFleetio(String vin, FleetioRequest request) throws Exception {
+		postFuelTranactionToFleetio(request);
+	}
+	
+	public int findVehicleIdFromFleetio(String vin ) throws Exception {
 		List<FleetioResponse> fleetioresponse = getVehiclesFromFleetio(vin);
 		logger.info("vin found response  :" + fleetioresponse.size());
 
 		if (fleetioresponse != null && fleetioresponse.size() > 0) {
-			request.setVehicle_id(fleetioresponse.get(0).getId().intValue());
-			postFuelTranactionToFleetio(request);
+			return fleetioresponse.get(0).getId().intValue();
+		}else {
+			logger.info("vin not found on Fleetio, so no FuelEntry push  :" + fleetioresponse.size());
+			return 0; 
 		}
 	}
+
 
 	/**
 	 * to get vehicle id of Fleetio based on single or multiple vins passed in e.g.
@@ -64,12 +71,14 @@ public class FleetioConnector {
 				+ request.getUs_gallons() + ",  \"reference\": \"" + " Car IQ " + " \", \"meter_entry_attributes\": {\n"
 				+ "	 \"value\": " + request.getMeter_entry_attributes().getValue() + " } \n" + "     }";
 
+    logger.info("requestJsonTemp to pushFuelEntry :" + requestJsonTemp);
+
 		RestTemplate restTemplate = new RestTemplate();
 		final HttpEntity<String> entity = new HttpEntity<String>(requestJsonTemp,
 				createHttpHeaders(Constants.token, Constants.account));
 		logger.info(entity.getBody().toString());
 		ResponseEntity<String> response = restTemplate.postForEntity(Constants.fleetioPostUrl, entity, String.class);
-		logger.info("status code from Fleetio :" + response.getStatusCodeValue());
+		logger.info("status code from Fleetio for pushFuelEntry :" + response.getStatusCodeValue());
 	}
 
 	/**

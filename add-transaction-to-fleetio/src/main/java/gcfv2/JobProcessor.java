@@ -68,6 +68,8 @@ public class JobProcessor {
 
 			}
 
+      sqlRunner = null;
+
 		} catch (Exception e) {
 			logger.log(Level.SEVERE, "Error in JobProcessor.process : [ " + e.getMessage() + " ]");
 			e.printStackTrace();
@@ -148,39 +150,46 @@ public class JobProcessor {
 				if (fleet != null) {
 					try {
 						FleetioConnector fleetioConnector = new FleetioConnector();
-						Long vendorId = fleetioConnector.getVendor(t);
+						
 					
 						logger.info(counter++ + ") before calling api for  : " + t.getVin() + " -- " + t.getDateTime());
 
 						String vin = t.getVin();
-					
-						FleetioRequest request = new FleetioRequest();
-						double odometer = t.getOdometer();
-                       //odometer =  51880;
-						if (Constants.FLEETIO_TEST) {
-							vin = Constants.FLEETIO_TEST_VIN; //"1C4RJFLG2JC419001";
-							 odometer = Constants.FLEETIO_TEST_ODOMETER;
-							//request.setVehicle_id(1958594);
+						
+						//get vehicle id from Fleetio for Vin, if not exists, do not push Fuel ENtry
+						int vehicleId = fleetioConnector.findVehicleIdFromFleetio(vin);
+						
+						if(vehicleId != 0) { // if found
+							
+							Long vendorId = fleetioConnector.getVendor(t);
+						
+							FleetioRequest request = new FleetioRequest();
+							
+							
+							request.setVehicle_id(vehicleId);
+							request.setLiters(covertToTwoDecimal(t.getVolume()));
+							request.setUs_gallons(t.getVolume());  // gallons
+							request.setPrice_per_volume_unit(t.getUnitPrice());
+							request.setPersonal(null);
+							request.setPartial(null);
+							request.setStationName(t.getStationName());
+							
+							double odometer = t.getOdometer();   //odometer =  51880;
+							logger.info("odometer : " + odometer);
+							request.setMeter_entry_attributes(new Meter_entry_attributes(odometer));
+							request.setFuel_type_id(Constants.FLEETIO_FULE_TYPE_ID_GAS); // todo Fleetio FuelType for Gas
+							request.setDate(t.getDateTime());
+							request.setVendor_id(vendorId != null ? vendorId.intValue() : null); //set vendor id
+							
+	
+							// call connector and send Fuel Tx to Fleetio
+							fleetioConnector.sendToFleetio(vin, request);
+							logger.info("done sendToFleetio  for vin: " + vin);
+	
+							lastSuccess = Timestamp.valueOf(t.getDateTime());
+							successFulList.add(t);
+						
 						}
-
-						request.setLiters(covertToTwoDecimal(t.getVolume()));
-						request.setUs_gallons(t.getVolume());  // gallons
-						request.setPrice_per_volume_unit(t.getUnitPrice());
-						request.setPersonal(null);
-						request.setPartial(null);
-						request.setStationName(t.getStationName());
-						logger.info("odometer : " + odometer);
-						request.setMeter_entry_attributes(new Meter_entry_attributes(odometer));
-						request.setFuel_type_id(Constants.FLEETIO_FULE_TYPE_ID_GAS); // todo Fleetio FuelType for Gas
-						request.setDate(t.getDateTime());
-						request.setVendor_id(vendorId != null ? vendorId.intValue() : null); //set vendor id
-
-						// call connector and send Fuel Tx to Fleetio
-						fleetioConnector.sendToFleetio(vin, request);
-						logger.info("done sendToFleetio  for vin: " + vin);
-
-						lastSuccess = Timestamp.valueOf(t.getDateTime());
-						successFulList.add(t);
 
 					} catch (Exception exx) {
 						logger.info("Error while calling Fleetio API, Exception log message and proceed : [ "
